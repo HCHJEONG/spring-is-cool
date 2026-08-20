@@ -31,7 +31,7 @@ class SQLiteWorldEventStoreTests {
     }
 
     @Test
-    fun `world session restores answered line from stored history`() {
+    fun `world session restores latest telephone state from stored history`() {
         val database = Files.createTempFile("spring-is-cool-world-", ".sqlite")
         val store = SQLiteWorldEventStore(
             PersistenceProperties(sqlitePath = database.toString()),
@@ -53,6 +53,38 @@ class SQLiteWorldEventStoreTests {
         assertTrue(restored.lineOffline)
         assertFalse(restored.telephoneRinging)
         assertEquals(first.history().size, restored.history().size)
+    }
+
+    @Test
+    fun `new incoming call after stored offline line makes telephone ring again`() {
+        val database = Files.createTempFile("spring-is-cool-world-", ".sqlite")
+        val store = SQLiteWorldEventStore(
+            PersistenceProperties(sqlitePath = database.toString()),
+        )
+        store.initialize()
+
+        val first = WorldSession(sessionId = "test-office", eventStore = store)
+        first.answerTelephone()
+        first.record(WorldAction.AnsweredTelephone, "The operator answered the ringing telephone.")
+        first.record(WorldAction.LineWentOffline, "The caller said goodbye and the telephone line went offline.")
+
+        val restored = WorldSession(
+            sessionId = "test-office",
+            eventStore = store,
+            storedEvents = store.load("test-office"),
+        )
+        restored.startIncomingCall()
+
+        val reloaded = WorldSession(
+            sessionId = "test-office",
+            eventStore = store,
+            storedEvents = store.load("test-office"),
+        )
+
+        assertFalse(reloaded.lineAnswered)
+        assertFalse(reloaded.lineOffline)
+        assertTrue(reloaded.telephoneRinging)
+        assertTrue(reloaded.history().any { it.action == WorldAction.IncomingCall })
     }
 
     @Test

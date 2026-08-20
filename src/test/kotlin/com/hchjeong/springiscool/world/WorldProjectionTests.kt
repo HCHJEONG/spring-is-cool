@@ -47,6 +47,29 @@ class WorldProjectionTests {
     }
 
     @Test
+    fun `projects latest incoming call as ringing after previous offline call`() {
+        val session = WorldSession()
+
+        session.answerTelephone()
+        session.record(
+            action = WorldAction.AnsweredTelephone,
+            observation = "The operator answered the ringing telephone and received the caller's instruction.",
+        )
+        session.record(
+            action = WorldAction.LineWentOffline,
+            observation = "The caller said goodbye and the telephone line went offline.",
+        )
+        session.startIncomingCall()
+
+        val projection = WorldProjection.from(session)
+
+        assertEquals(TelephoneState.RINGING, projection.telephone.state)
+        assertEquals(LineState.UNANSWERED, projection.telephone.lineState)
+        assertEquals(null, projection.activeInstruction)
+        assertEquals(false, projection.instructionCompleted)
+    }
+
+    @Test
     fun `projects instruction completed only after look follows the call instruction`() {
         val session = WorldSession()
 

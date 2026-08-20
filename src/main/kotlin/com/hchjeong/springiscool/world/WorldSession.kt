@@ -23,14 +23,7 @@ class WorldSession(
         private set
 
     init {
-        if (events.any { it.action == WorldAction.AnsweredTelephone }) {
-            lineAnswered = true
-            telephoneRinging = false
-        }
-        if (events.any { it.action == WorldAction.LineWentOffline } || lineAnswered) {
-            lineOffline = true
-            telephoneRinging = false
-        }
+        restoreTelephoneState()
 
         if (events.isEmpty()) {
             record(
@@ -67,6 +60,16 @@ class WorldSession(
         return event
     }
 
+    fun startIncomingCall() {
+        lineAnswered = false
+        lineOffline = false
+        telephoneRinging = true
+        record(
+            action = WorldAction.IncomingCall,
+            observation = "A new caller reached the office through the SSH connection.",
+        )
+    }
+
     fun answerTelephone(): Boolean {
         if (!telephoneRinging) {
             return false
@@ -76,6 +79,30 @@ class WorldSession(
         telephoneRinging = false
         lineOffline = true
         return true
+    }
+
+    private fun restoreTelephoneState() {
+        when (events.lastOrNull { it.action.isTelephoneStateAction() }?.action) {
+            WorldAction.IncomingCall, null -> {
+                lineAnswered = false
+                lineOffline = false
+                telephoneRinging = true
+            }
+
+            WorldAction.AnsweredTelephone -> {
+                lineAnswered = true
+                lineOffline = false
+                telephoneRinging = false
+            }
+
+            WorldAction.LineWentOffline -> {
+                lineAnswered = true
+                lineOffline = true
+                telephoneRinging = false
+            }
+
+            else -> Unit
+        }
     }
 
     private fun StoredWorldEvent.toWorldEvent(): WorldEvent {
@@ -127,6 +154,10 @@ sealed interface WorldAction {
         override val verb = "LOOK"
     }
 
+    data object IncomingCall : WorldAction {
+        override val verb = "RING"
+    }
+
     data object AnsweredTelephone : WorldAction {
         override val verb = "ANSWER"
     }
@@ -172,6 +203,7 @@ sealed interface WorldAction {
             return when (verb.uppercase()) {
                 "SYSTEM" -> SystemOpened
                 "LOOK" -> Looked
+                "RING" -> IncomingCall
                 "ANSWER" -> AnsweredTelephone
                 "OFFLINE" -> LineWentOffline
                 "HELP" -> RequestedHelp
@@ -186,4 +218,10 @@ sealed interface WorldAction {
             }
         }
     }
+}
+
+private fun WorldAction.isTelephoneStateAction(): Boolean {
+    return this == WorldAction.IncomingCall ||
+        this == WorldAction.AnsweredTelephone ||
+        this == WorldAction.LineWentOffline
 }

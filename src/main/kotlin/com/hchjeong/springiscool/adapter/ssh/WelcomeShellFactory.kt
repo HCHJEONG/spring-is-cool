@@ -84,6 +84,7 @@ private class WelcomeShellCommand(
         val terminal = TerminalOutput(shellOutput)
         val lineBuffer = StringBuilder()
         val worldSession = worldSessionFactory.create()
+        worldSession.startIncomingCall()
         val presenceLease = presenceRegistry.enterSsh()
         var promptPlaceholderVisible = false
 

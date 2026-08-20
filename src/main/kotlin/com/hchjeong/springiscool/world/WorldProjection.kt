@@ -35,14 +35,17 @@ data class WorldProjection(
         }
 
         fun from(events: List<WorldEvent>, presence: PresenceSnapshot = PresenceSnapshot()): WorldProjection {
-            val answered = events.any { it.action == WorldAction.AnsweredTelephone }
-            val offline = events.any { it.action == WorldAction.LineWentOffline } || answered
-            val ringing = !answered && !offline
+            val latestTelephoneEvent = events.lastOrNull {
+                it.action == WorldAction.IncomingCall ||
+                    it.action == WorldAction.AnsweredTelephone ||
+                    it.action == WorldAction.LineWentOffline
+            }
+            val ringing = latestTelephoneEvent == null || latestTelephoneEvent.action == WorldAction.IncomingCall
+            val answered = latestTelephoneEvent?.action == WorldAction.AnsweredTelephone
+            val offline = latestTelephoneEvent?.action == WorldAction.LineWentOffline
             val latestAssignment = events.lastOrNull { it.action == WorldAction.AssignedTask }
             val latestEvidence = events.lastOrNull { it.action == WorldAction.EvidenceAttached }
-            val instructionEvent = events.lastOrNull {
-                it.action == WorldAction.LineWentOffline || it.action == WorldAction.AnsweredTelephone
-            }
+            val instructionEvent = events.lastOrNull { it.action == WorldAction.LineWentOffline }
             val instructionCompleted = instructionEvent?.let { instruction ->
                 events.any { it.action == WorldAction.Looked && it.sequence > instruction.sequence }
             } ?: false
