@@ -747,33 +747,41 @@ static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있�
 - Provider text must parse as `SceneDefinition` JSON and pass existing validation before rendering.
 - Tests use a fake Gemini client; real `dev-demo`/`aws-demo` smoke tests require target env changes and GCP access.
 
-## 13. Milestone 13: Semantic World, Ledger, and External System Pilots
+## 13. Milestone 13: MVP Semantic World And Demo Closure
 
 ### Goal
 
-장기 비전의 큰 축인 semantic model, ledger, external adapters를 core 원칙에 맞게 작은 pilot으로 연결한다.
+MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴지도록 닫는다.
+
+이 milestone은 OWL/RDF, ledger, external adapters를 본격 구현하는 단계가 아니다. 그 대신
+나중에 그 층들이 붙을 수 있도록 현재 world event log에서 read-only semantic projection을
+만든다.
 
 이 milestone의 질문은 다음이다.
 
-> 의미, 행동, 연결, 표현을 분리한 채로 enterprise/factory/family world로 확장할 수 있는가?
+> 사용자가 명령을 입력할 때마다 같은 event log에서 계산된 현재 world state가 일관되게 보이는가?
 
 ### Scope
 
-- OWL/RDF-compatible semantic model pilot
-- Java behavior model과 ontology meaning의 경계 문서화
-- RDF export or read-only graph projection 후보
-- ledger/value/resource state pilot
-  - single-entry view 가능성
-  - double-entry canonical model 후보
-  - action/event와 economic event 연결
-- MCP adapter pilot or HTTP tool adapter pilot
-- factory/device event adapter simulation
-  - MQTT/OPC-UA는 실제 연결보다 simulated port 우선
-- family/personal world sample scenario
-  - bill notice
-  - household obligation
-  - asset/payment decision
-- scene projection across enterprise/factory/family examples
+- `WorldProjection` read model 추가
+  - source of truth는 `WorldEvent` log
+  - projection은 현재 전화, line, instruction, delegation, evidence 상태를 계산
+- incoming call flow 의미 완성
+  - `ANSWER` 후 caller instruction 수신
+  - caller goodbye 후 `OFFLINE` event 기록
+  - `LOOK`, `STATUS`, `LOG`에서 offline/instruction 상태 확인
+- AI world summary에 semantic facts 제공
+  - Gemini/static director는 projected facts를 참고
+  - AI는 world state를 직접 변경하지 않음
+- MVP demo script 정리
+  - `HELP`
+  - `ANSWER`
+  - `LOOK`
+  - `STATUS`
+  - `AI ...`
+  - `ASSIGN clerk check line`
+  - `LOG`
+- implementation plan에 future semantic/ledger/external adapter 방향을 후속 단계로 분리
 
 ### Non-Goals
 
@@ -782,12 +790,34 @@ static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있�
 - production factory control
 - production personal finance product
 - mandatory MCP/RDF/MQTT dependency
+- outgoing user-to-user calls
+- multi-user presence
+- AI-driven mutation
 
 ### Success Criteria
 
-- 같은 World/Actor/Action/Event 계열 모델이 enterprise, factory, family 예시를 모두 설명할 수 있다.
-- OWL/RDF는 meaning layer로 존재하고 runtime behavior를 대체하지 않는다.
-- ledger는 UI 장식이 아니라 world value/resource state와 연결된다.
+- `ANSWER`는 caller message를 남긴 뒤 line을 offline으로 만든다.
+- `LOOK`은 offline line과 남은 instruction을 보여준다.
+- `STATUS`는 projected telephone/line/instruction/evidence state를 보여준다.
+- `LOG`는 `ANSWER`, `OFFLINE`, delegation, evidence events를 설명 가능한 순서로 보여준다.
+- `AI ...`는 projected semantic facts를 context로 받지만 world를 직접 변경하지 않는다.
+- SQLite restore 후에도 projection이 같은 world state를 계산한다.
+
+### Current Implementation Notes
+
+- `WorldProjection` is the MVP semantic read model.
+- `WorldEvent` remains the source of truth.
+- The current projection covers telephone state, line state, active instruction, latest delegation, latest evidence, and event count.
+- `LOOK`, `STATUS`, static AI, and Gemini AI now consume projected facts.
+- The first incoming call now resolves into an `OFFLINE` event instead of leaving an ambiguous open line.
+
+### Deferred Follow-Up
+
+- OWL/RDF-compatible export of projected facts.
+- Ledger/value/resource model.
+- Simulated factory/device adapter.
+- Outgoing calls to agents or users.
+- Multi-user session presence.
 - external technology는 adapter로 유지된다.
 
 ## 14. Cross-Cutting Rules

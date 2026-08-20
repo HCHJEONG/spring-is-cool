@@ -76,7 +76,10 @@ class GeminiAiDirector(
             - actor: ${request.worldSummary.actorId}
             - telephoneRinging: ${request.worldSummary.telephoneRinging}
             - lineAnswered: ${request.worldSummary.lineAnswered}
+            - lineOffline: ${request.worldSummary.lineOffline}
             - eventCount: ${request.worldSummary.eventCount}
+            Facts:
+            ${request.worldSummary.facts.joinToString("\n")}
             Recent events:
             ${request.worldSummary.recentEvents.joinToString("\n")}
         """.trimIndent()

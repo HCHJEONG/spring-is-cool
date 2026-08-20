@@ -40,10 +40,10 @@ class StaticAiDirector(
     }
 
     private fun buildDefinition(request: AiDirectorRequest): SceneDefinition {
-        val lineState = if (request.worldSummary.lineAnswered) {
-            "The open line listens before it answers."
-        } else {
-            "The unanswered line keeps ringing behind the wall."
+        val lineState = when {
+            request.worldSummary.lineOffline -> "The line is offline, but the instruction remains."
+            request.worldSummary.lineAnswered -> "The open line listens before it answers."
+            else -> "The unanswered line keeps ringing behind the wall."
         }
 
         val echo = request.userText

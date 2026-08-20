@@ -18,15 +18,20 @@ data class WorldSummary(
     val actorId: String,
     val telephoneRinging: Boolean,
     val lineAnswered: Boolean,
+    val lineOffline: Boolean,
+    val facts: List<String>,
     val eventCount: Int,
     val recentEvents: List<String>,
 ) {
     companion object {
         fun from(session: WorldSession, maxEvents: Int = 6): WorldSummary {
+            val projection = com.hchjeong.springiscool.world.WorldProjection.from(session)
             return WorldSummary(
                 actorId = session.actor.id,
                 telephoneRinging = session.telephoneRinging,
                 lineAnswered = session.lineAnswered,
+                lineOffline = session.lineOffline,
+                facts = projection.facts,
                 eventCount = session.history().size,
                 recentEvents = session.history().takeLast(maxEvents).map {
                     "${it.sequence.toString().padStart(3, '0')} ${it.action.verb}: ${it.observation.text}"

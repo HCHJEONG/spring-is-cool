@@ -44,18 +44,30 @@ class WorldCommandHandler(
             action = WorldAction.Looked,
             observation = "The operator inspected the office.",
         )
+        val projection = WorldProjection.from(session)
 
-        val telephoneLine = when {
-            session.telephoneRinging -> "The telephone is still ringing."
-            session.lineOffline -> "The telephone rests in its cradle. The line is offline."
-            else -> "The telephone rests in its cradle of silence."
+        val telephoneLine = when (projection.telephone.state) {
+            TelephoneState.RINGING -> "The telephone is still ringing."
+            TelephoneState.SILENT -> if (projection.telephone.lineState == LineState.OFFLINE) {
+                "The telephone rests in its cradle. The line is offline."
+            } else {
+                "The telephone rests in its cradle of silence."
+            }
         }
 
-        val lineState = when {
-            session.lineOffline -> "The caller is gone, but the instruction remains."
-            session.lineAnswered -> "The open line breathes faintly."
-            else -> "No one has answered."
+        val lineState = when (projection.telephone.lineState) {
+            LineState.OFFLINE -> "The caller is gone, but the instruction remains."
+            LineState.OPEN -> "The open line breathes faintly."
+            LineState.UNANSWERED -> "No one has answered."
         }
+
+        val instructionLines = projection.activeInstruction?.let {
+            listOf(line("Instruction: $it", SceneStyle.SYSTEM, RevealMode.INSTANT, 220))
+        } ?: emptyList()
+
+        val evidenceLines = projection.lastEvidenceId?.let {
+            listOf(line("Evidence on file: $it", SceneStyle.MUTED, RevealMode.INSTANT, 180))
+        } ?: emptyList()
 
         return Scene(
             lines = listOf(
@@ -65,7 +77,7 @@ class WorldCommandHandler(
                 blank(180),
                 line(telephoneLine, delayAfterMillis = 360),
                 line(lineState, SceneStyle.MUTED, delayAfterMillis = 260),
-            ),
+            ) + instructionLines + evidenceLines,
         )
     }
 
@@ -308,20 +320,26 @@ class WorldCommandHandler(
             action = WorldAction.CheckedStatus,
             observation = "The operator checked the current world state.",
         )
+        val projection = WorldProjection.from(session)
 
-        val phoneState = if (session.telephoneRinging) "RINGING" else "SILENT"
-        val lineState = when {
-            session.lineOffline -> "OFFLINE"
-            session.lineAnswered -> "OPEN"
-            else -> "UNANSWERED"
+        val phoneState = projection.telephone.state.name
+        val lineState = projection.telephone.lineState.name
+
+        val instructionLine = projection.activeInstruction?.let {
+            line("  INSTRUCTION $it", SceneStyle.MUTED, RevealMode.INSTANT, 120)
+        }
+        val evidenceLine = projection.lastEvidenceId?.let {
+            line("  EVIDENCE    $it", SceneStyle.MUTED, RevealMode.INSTANT, 120)
         }
 
         return Scene(
-            lines = listOf(
+            lines = listOfNotNull(
                 line("ONTOLOFFICE STATUS", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
                 line("  TELEPHONE   $phoneState", SceneStyle.MUTED, RevealMode.INSTANT, 120),
                 line("  LINE        $lineState", SceneStyle.MUTED, RevealMode.INSTANT, 120),
-                line("  EVENTS      ${session.history().size}", SceneStyle.MUTED, RevealMode.INSTANT, 160),
+                instructionLine,
+                evidenceLine,
+                line("  EVENTS      ${projection.eventCount}", SceneStyle.MUTED, RevealMode.INSTANT, 160),
                 blank(120),
                 line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
             ),
@@ -330,11 +348,44 @@ class WorldCommandHandler(
 
     private fun goodbyeScene(): Scene {
         return Scene(
-            showPromptAfter = false,
+            showPromptAfter = true,
+            terminalWidth = 80,
             lines = listOf(
-                line("The line goes dead.", SceneStyle.SYSTEM, delayAfterMillis = 220),
+                line("SESSION CLOSING", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+                blank(120),
+            ) + mainframeOfficeArt() + listOf(
+                blank(180),
+                line("The office keeps running after you leave.", SceneStyle.NARRATION, delayAfterMillis = 320),
+                line("LOCAL TERMINAL READY", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
             ),
         )
+    }
+
+    private fun mainframeOfficeArt(): List<SceneLine> {
+        return listOf(
+            " .--------------------------------------------------------------------------.",
+            " | ONTOLOFFICE MAINFRAME OPERATIONS ROOM                                    |",
+            " |--------------------------------------------------------------------------|",
+            " |  [ TAPE ]     [ TAPE ]       STATUS WALL                02:17:43         |",
+            " |   .---.        .---.     .----------------.      .----------------.      |",
+            " |  /  o  \\      /  o  \\    | LINE: OFFLINE  |      | EVENTS: STORED |      |",
+            " |  \\  o  /      \\  o  /    | AI:   STANDBY  |      | DB:     READY  |      |",
+            " |   '---'        '---'     '----------------'      '----------------'      |",
+            " |                                                                          |",
+            " |      .--------------------.        .--------------------.                |",
+            " |      |  OPERATOR DESK     |        |  LOCAL TERMINAL    |                |",
+            " |      |  PHONE IN CRADLE   |        |  > _               |                |",
+            " |      '--------------------'        '--------------------'                |",
+            " '--------------------------------------------------------------------------'",
+        ).mapIndexed { index, text ->
+            line(
+                text = text,
+                style = SceneStyle.MUTED,
+                reveal = RevealMode.INSTANT,
+                delayAfterMillis = if (index == 0) 140 else 125,
+                characterDelayMillis = 0,
+            )
+        }
     }
 
     private fun blank(delayAfterMillis: Long): SceneLine {

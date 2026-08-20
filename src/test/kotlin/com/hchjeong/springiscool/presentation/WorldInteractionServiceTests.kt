@@ -32,6 +32,7 @@ class WorldInteractionServiceTests {
         val result = service.submit(WorldSession(), "quit")
 
         assertEquals(InteractionOutcome.QUIT, result.outcome)
-        assertEquals(false, result.presentedScene.showPromptAfter)
+        assertEquals(true, result.presentedScene.showPromptAfter)
+        assertTrue(result.presentedScene.lines.any { it.text.contains("MAINFRAME OPERATIONS ROOM") })
     }
 }

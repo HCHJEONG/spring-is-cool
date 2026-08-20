@@ -132,11 +132,13 @@ class WorldCommandHandlerTests {
     }
 
     @Test
-    fun `quit returns non prompting quit scene`() {
+    fun `quit returns operations room terminal scene`() {
         val result = handler.handle(WorldSession(), "quit")
 
         assertIs<CommandResult.Quit>(result)
-        assertFalse(result.scene.showPromptAfter)
+        assertTrue(result.scene.showPromptAfter)
+        assertTrue(result.scene.lines.any { it.text.contains("MAINFRAME OPERATIONS ROOM") })
+        assertTrue(result.scene.lines.any { it.text.contains("LOCAL TERMINAL") })
     }
 
     @Test
