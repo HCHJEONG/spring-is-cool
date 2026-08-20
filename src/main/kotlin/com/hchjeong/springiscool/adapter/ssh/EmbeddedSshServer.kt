@@ -13,6 +13,7 @@ import java.nio.file.Path
 @Component
 class EmbeddedSshServer(
     private val properties: SshServerProperties,
+    private val shellFactory: WelcomeShellFactory,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -36,7 +37,7 @@ class EmbeddedSshServer(
         server.passwordAuthenticator = PasswordAuthenticator { username, password, _ ->
             username == properties.demoUser && password == properties.demoPassword
         }
-
+        server.shellFactory = shellFactory
         server.start()
         sshServer = server
 
