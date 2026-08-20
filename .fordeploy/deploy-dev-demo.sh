@@ -14,7 +14,6 @@ set -euo pipefail
 : "${CONTAINER_PORT:=2222}"
 : "${DEMO_USER:=demo}"
 : "${DEMO_PASSWORD:=demo}"
-: "${REMOTE_DOCKER:=docker}"
 : "${CONFIGURE_UFW:=0}"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -78,7 +77,6 @@ rm -f "$LOCAL_IMAGE_FILE"
 
 log "loading image and replacing container on $TARGET_HOST"
 ssh "$TARGET_HOST" \
-  REMOTE_DOCKER="$REMOTE_DOCKER" \
   REMOTE_IMAGE_FILE="$REMOTE_IMAGE_FILE" \
   REMOTE_APP_DIR="$REMOTE_APP_DIR" \
   IMAGE="$IMAGE" \
@@ -90,12 +88,17 @@ ssh "$TARGET_HOST" \
   bash -s <<'REMOTE_DEPLOY'
 set -euo pipefail
 
-$REMOTE_DOCKER load -i "$REMOTE_IMAGE_FILE"
+DOCKER=(docker)
+if ! docker info >/dev/null 2>&1; then
+  DOCKER=(sudo docker)
+fi
+
+"${DOCKER[@]}" load -i "$REMOTE_IMAGE_FILE"
 rm -f "$REMOTE_IMAGE_FILE"
 
-$REMOTE_DOCKER rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+"${DOCKER[@]}" rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 
-$REMOTE_DOCKER run -d \
+"${DOCKER[@]}" run -d \
   --restart unless-stopped \
   --name "$CONTAINER_NAME" \
   -p "0.0.0.0:${HOST_PORT}:${CONTAINER_PORT}" \
@@ -108,10 +111,10 @@ $REMOTE_DOCKER run -d \
   -v "${REMOTE_APP_DIR}/runtime/ssh:/app/runtime/ssh" \
   "$IMAGE"
 
-if ! $REMOTE_DOCKER ps --filter "name=^/${CONTAINER_NAME}$" --filter status=running --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+if ! "${DOCKER[@]}" ps --filter "name=^/${CONTAINER_NAME}$" --filter status=running --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
   echo "container did not enter running state" >&2
-  $REMOTE_DOCKER ps -a --filter "name=^/${CONTAINER_NAME}$"
-  $REMOTE_DOCKER logs --tail 80 "$CONTAINER_NAME" || true
+  "${DOCKER[@]}" ps -a --filter "name=^/${CONTAINER_NAME}$"
+  "${DOCKER[@]}" logs --tail 80 "$CONTAINER_NAME" || true
   exit 1
 fi
 
@@ -127,11 +130,11 @@ done
 
 if [ "$ready" -ne 1 ]; then
   echo "SSH port did not open on 127.0.0.1:${HOST_PORT}" >&2
-  $REMOTE_DOCKER logs --tail 80 "$CONTAINER_NAME" || true
+  "${DOCKER[@]}" logs --tail 80 "$CONTAINER_NAME" || true
   exit 1
 fi
 
-$REMOTE_DOCKER ps --filter "name=^/${CONTAINER_NAME}$" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+"${DOCKER[@]}" ps --filter "name=^/${CONTAINER_NAME}$" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 REMOTE_DEPLOY
 
 log "deploy success: ssh ${DEMO_USER}@${TARGET_HOST} -p ${HOST_PORT}"

@@ -60,10 +60,11 @@ ssh demo@192.168.0.104 -p 2222
 
 ## AWS Demo
 
-The AWS target is deliberately explicit. Provide `AWS_DEMO_HOST` when running:
+The AWS target uses the local `aws-demo` SSH alias by default. That alias reaches
+the private instance through `aws-bastion`.
 
 ```bash
-AWS_DEMO_HOST=ubuntu@example .fordeploy/deploy-aws-demo.sh
+.fordeploy/deploy-aws-demo.sh
 ```
 
 The AWS instance Security Group must allow inbound TCP traffic to `HOST_PORT`
@@ -71,5 +72,14 @@ from the desired client CIDR. Keep that infrastructure change explicit and
 outside the deploy script. In this environment, make that change manually from
 the AWS bastion host using the AWS CLI available there.
 
-If `aws-demo` later needs a bastion/private-host path, keep that in the
-aws-specific script rather than sharing target details with `dev-demo`.
+Current `aws-demo` is a private instance without a public IP. Security Group
+rules alone cannot make it directly reachable from the internet. After
+deployment, connect through the bastion:
+
+```bash
+ssh -J aws-bastion demo@172.31.76.194 -p 2222
+```
+
+If `aws-demo` later needs direct public access, use an explicit AWS entrypoint
+such as an Elastic IP or a TCP load balancer, and narrow the Security Group
+before exposing it.
