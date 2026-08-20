@@ -354,3 +354,21 @@ Java/Spring의 scheduler 또는 coroutine-style loop 없이 단순 blocking dela
 34. 실제 화면을 보고 writing, silence, spacing, timing, cursor behavior를 먼저 조정한다.
 
 이 세부 단계들은 최종 architecture 명세가 아니다. 첫 milestone의 `SceneModel`과 renderer 경계를 몸으로 검증하기 위한 작업 순서이며, 구현 결과에 따라 병합되거나 삭제되거나 이름이 바뀔 수 있다.
+
+## Deployment Validation Commands
+
+첫 milestone의 remote Docker validation은 배포 스크립트 실행 후 실제 SSH 접속으로 확인한다.
+
+`dev-demo`는 trusted LAN의 개발 서버이므로 로컬 WSL에서 직접 접속한다.
+
+```bash
+ssh demo@192.168.0.104 -p 2222
+```
+
+`aws-demo`는 public IP가 없는 private instance이므로 로컬 WSL에서 bastion을 경유해 접속한다.
+
+```bash
+ssh -J aws-bastion demo@172.31.76.194 -p 2222
+```
+
+두 명령 모두 password는 첫 milestone demo credential인 `demo`를 사용한다. 접속 직후 cinematic intro scene이 재생되고 `> _` prompt가 표시되면 remote Docker validation은 성공으로 본다.
