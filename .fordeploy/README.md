@@ -45,6 +45,22 @@ Run from WSL:
 .fordeploy/deploy-dev-demo.sh
 ```
 
+The dev demo keeps repository-specific runtime files under:
+
+```text
+/home/hchjeong/spring-is-cool
+/home/hchjeong/docker_images/spring-is-cool
+```
+
+Runtime files that must stay outside the Docker image live directly under the
+application runtime directory:
+
+```text
+/home/hchjeong/spring-is-cool/.env.local
+/home/hchjeong/spring-is-cool/gcp-key.json
+/home/hchjeong/spring-is-cool/runtime/ssh/hostkey.ser
+```
+
 If the dev-demo host firewall blocks inbound app SSH traffic, open the selected
 host port on that machine. For example:
 
@@ -71,9 +87,17 @@ layout used by the other demo apps:
 /home/ubuntu/docker_images/spring-is-cool
 ```
 
-Older deployments used `/srv/spring-is-cool`. The AWS deploy script preserves an
-existing SSH host key from that legacy path when creating the home-based runtime
-directory, but new deployments should use the home-based paths above.
+Runtime files that must stay outside the Docker image live directly under the
+application runtime directory:
+
+```text
+/home/ubuntu/spring-is-cool/.env.local
+/home/ubuntu/spring-is-cool/gcp-key.json
+/home/ubuntu/spring-is-cool/runtime/ssh/hostkey.ser
+```
+
+Older deployments used `/srv/spring-is-cool`, but that legacy runtime directory
+has been retired. New deployments should use the home-based paths above.
 
 ```bash
 .fordeploy/deploy-aws-demo.sh
