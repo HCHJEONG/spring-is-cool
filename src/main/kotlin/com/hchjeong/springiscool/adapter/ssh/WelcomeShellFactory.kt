@@ -11,6 +11,7 @@ import java.io.OutputStream
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 import com.hchjeong.springiscool.cinematic.renderer.CinematicTextRenderer
+import com.hchjeong.springiscool.cinematic.renderer.TerminalOutput
 
 private fun writeLine(writer: PrintWriter, text: String = "") {
     writer.print("$text\r\n")
@@ -70,9 +71,12 @@ private class WelcomeShellCommand(
         val shellOutput = output ?: return
 
         val writer = PrintWriter(shellOutput.writer(StandardCharsets.UTF_8), true)
+        val terminal = TerminalOutput(shellOutput)
         val lineBuffer = StringBuilder()
+        var promptPlaceholderVisible = false
 
         renderer.renderIntro(shellOutput)
+        promptPlaceholderVisible = true
 
         while (!Thread.currentThread().isInterrupted) {
             val next = shellInput.read()
@@ -87,6 +91,11 @@ private class WelcomeShellCommand(
                     val line = lineBuffer.toString().trim()
                     lineBuffer.clear()
 
+                    if (promptPlaceholderVisible) {
+                        terminal.erasePromptPlaceholder()
+                        promptPlaceholderVisible = false
+                    }
+
                     writeLine(writer)
 
                     if (line.equals("quit", ignoreCase = true) || line.equals("exit", ignoreCase = true)) {
@@ -96,17 +105,26 @@ private class WelcomeShellCommand(
                     }
 
                     renderer.renderCommandResponse(shellOutput, line)
+                    promptPlaceholderVisible = true
                 }
 
                 '\b', 127.toChar() -> {
                     if (lineBuffer.isNotEmpty()) {
                         lineBuffer.deleteCharAt(lineBuffer.length - 1)
-                        writer.print("\b \b")
-                        writer.flush()
+                        terminal.erasePreviousCharacter()
+
+                        if (lineBuffer.isEmpty()) {
+                            terminal.restorePromptPlaceholder()
+                            promptPlaceholderVisible = true
+                        }
                     }
                 }
 
                 else -> {
+                    if (promptPlaceholderVisible) {
+                        promptPlaceholderVisible = false
+                    }
+
                     lineBuffer.append(char)
                     writer.print(char)
                     writer.flush()

@@ -312,3 +312,45 @@ Java/Spring의 scheduler 또는 coroutine-style loop 없이 단순 blocking dela
 8. 로컬 SSH 접속으로 직접 체감 테스트
 
 첫 번째 구현은 작게 끝나야 한다. 여기서 얻고 싶은 것은 완성도가 아니라 방향 감각이다.
+
+## Suggested Manual Learning Steps
+
+위의 작업 항목은 실제 구현에서는 더 작은 수동 학습 단계로 나누어 진행한다.
+각 단계는 IntelliJ에서 직접 입력하고, 로컬 SSH 접속으로 바로 체감할 수 있을 만큼 작게 유지한다.
+
+1. Kotlin + Gradle Kotlin DSL 기반 Spring Boot skeleton을 만든다.
+2. JDK baseline을 Eclipse Temurin JDK 21로 맞춘다.
+3. Spring Web, DB, Security, JPA, Actuator 없이 non-web Spring Boot 애플리케이션으로 시작한다.
+4. `build.gradle.kts`에 Apache MINA SSHD 의존성을 추가한다.
+5. `application.yaml`에 non-web keep-alive 설정과 `spring-is-cool.ssh` runtime 설정을 추가한다.
+6. `SshServerProperties`를 만들어 YAML 설정을 typed configuration object로 받는다.
+7. `SpringIsCoolApplication`에 configuration properties scanning을 연결한다.
+8. `EmbeddedSshServer`를 만들어 Spring bean lifecycle에서 MINA `SshServer`를 시작하고 중지한다.
+9. demo user/password 인증을 임시로 붙이고, SSH server를 localhost의 demo port에 bind한다.
+10. `WelcomeShellFactory`를 만들고, 접속마다 shell command instance를 생성하게 한다.
+11. shell command에서 input/output/error stream과 exit callback을 받아 session lifecycle을 처리한다.
+12. char 단위 입력, echo, backspace, enter, `quit`/`exit` 종료를 구현한다.
+13. `cinematic.renderer` 패키지를 만들고 SSH adapter와 renderer core의 경계를 나눈다.
+14. `TerminalOutput`을 만들어 raw terminal output과 ANSI/control sequence를 한 곳에 모은다.
+15. `IntroSceneProvider`를 만들어 첫 hardcoded intro text를 제공한다.
+16. `CinematicTextRenderer`를 만들어 welcome, command response, goodbye, prompt 출력을 담당하게 한다.
+17. intro text를 여러 줄로 확장하고, 빈 줄과 Unicode 문자를 사용해 terminal 공간감을 확인한다.
+18. 줄 사이에 단순 `Thread.sleep` delay를 넣어 line-level timing을 검증한다.
+19. 세션 disconnect 또는 interruption 중에도 renderer가 조용히 중단되도록 `InterruptedException`을 처리한다.
+20. `TerminalOutput`에 clear screen, hide cursor, show cursor helper를 추가한다.
+21. intro 시작 시 화면을 지우고 커서를 숨긴 뒤, intro 종료 또는 중단 시 커서를 다시 보이게 한다.
+22. 일부 narration line을 typewriter 방식으로 글자 단위 reveal한다.
+23. punctuation character에 조금 더 긴 delay를 주어 문장 리듬을 시험한다.
+24. `IntroSceneLine`과 `RevealMode`를 도입해, 문자열 내용 추측 대신 scene data가 reveal 의도를 말하게 한다.
+25. `IntroSceneProvider`가 `List<String>` 대신 `List<IntroSceneLine>`을 반환하게 한다.
+26. `CinematicTextRenderer`가 `line.text`, `line.reveal`, `line.delayAfterMillis`를 실행하게 한다.
+27. 문자열 내용 기반 helper인 `shouldRevealSlowly`와 `delayAfterLineMillis`는 제거한다.
+28. `IntroSceneLine`에 필요하면 `characterDelayMillis`를 추가해 줄마다 typewriter 속도를 조정한다.
+29. prompt를 단순 출력이 아니라 intro 이후 세계가 계속 열린다는 느낌을 주는 표현으로 다듬는다.
+30. semantic style 후보를 작게 도입해 `NARRATION`, `SIGNAL`, `PROMPT`, `SYSTEM` 같은 의도를 표현한다.
+31. theme 또는 terminal helper가 semantic style을 실제 ANSI color/style로 변환하게 한다.
+32. 최소 Green CRT 또는 monochrome theme을 적용하되, raw ANSI 문자열은 계속 `TerminalOutput` 또는 terminal helper 경계 안에 둔다.
+33. 로컬 `./gradlew test`, `./gradlew bootRun`, SSH 접속 테스트를 반복한다.
+34. 실제 화면을 보고 writing, silence, spacing, timing, cursor behavior를 먼저 조정한다.
+
+이 세부 단계들은 최종 architecture 명세가 아니다. 첫 milestone의 `SceneModel`과 renderer 경계를 몸으로 검증하기 위한 작업 순서이며, 구현 결과에 따라 병합되거나 삭제되거나 이름이 바뀔 수 있다.
