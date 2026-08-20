@@ -74,6 +74,35 @@ class CinematicTextRendererTests {
         renderer.render(output, scene, timingProfile = TimingProfile.INSTANT)
 
         val rendered = output.toString(Charsets.UTF_8)
-        assertContains(rendered, "         \u001B[38;5;81mAB\u001B[0m")
+        assertContains(rendered, "\r         \u001B[38;5;81mAB\u001B[0m")
+    }
+
+    @Test
+    fun `returns to the first column before each scene line`() {
+        val output = ByteArrayOutputStream()
+        val scene = Scene(
+            showPromptAfter = false,
+            lines = listOf(
+                SceneLine(
+                    text = "The office is empty.",
+                    reveal = RevealMode.TYPEWRITER,
+                    style = SceneStyle.NARRATION,
+                    delayAfterMillis = 0,
+                    characterDelayMillis = 0,
+                ),
+                SceneLine(
+                    text = "Someone is calling.",
+                    reveal = RevealMode.INSTANT,
+                    style = SceneStyle.NARRATION,
+                    delayAfterMillis = 0,
+                ),
+            ),
+        )
+
+        renderer.render(output, scene, timingProfile = TimingProfile.INSTANT)
+
+        val rendered = output.toString(Charsets.UTF_8)
+        assertContains(rendered, "\r\u001B[38;5;114mT")
+        assertContains(rendered, "\r\u001B[38;5;114mSomeone")
     }
 }

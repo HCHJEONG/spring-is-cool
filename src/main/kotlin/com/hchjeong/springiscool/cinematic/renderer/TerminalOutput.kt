@@ -16,6 +16,10 @@ class TerminalOutput(
         write("$text\r\n")
     }
 
+    fun carriageReturn() {
+        write("\r")
+    }
+
     fun writeStyled(text: String, style: SceneStyle) {
         write("${theme.ansiFor(style)}$text$RESET")
     }

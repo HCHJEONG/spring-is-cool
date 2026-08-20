@@ -58,6 +58,7 @@ class CinematicTextRenderer(
         line: SceneLine,
         timingProfile: TimingProfile,
     ) {
+        terminal.carriageReturn()
         terminal.write(canvas.padFor(line.text, line.alignment))
 
         when (line.reveal) {
