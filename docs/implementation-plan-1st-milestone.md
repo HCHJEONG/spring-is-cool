@@ -193,6 +193,54 @@ intro 이후 사용자에게 `> _` prompt를 보여주는 최소 loop다.
 
 검토할 주요 선택지는 다음과 같다.
 
+### Project Baseline
+
+첫 milestone의 프로젝트 baseline은 다음과 같이 둔다.
+
+```text
+Language: Kotlin
+Build system: Gradle
+Gradle DSL: Kotlin DSL
+JDK distribution: Eclipse Temurin
+JDK version: 21
+Java language version: 21
+Packaging: Jar
+Spring Boot config format: YAML
+Initial dependencies: none beyond the generated Spring Boot/Kotlin baseline
+```
+
+이유:
+
+- Kotlin은 scene model, renderer command, terminal event 같은 작은 data structure를
+  간결하게 표현하기 좋다.
+- Gradle Kotlin DSL은 Kotlin 프로젝트에서 IntelliJ와 잘 맞고, build 설정을 Kotlin 문법으로
+  일관되게 다룰 수 있다.
+- Java 21은 Spring Boot와 Kotlin 기반 서버 개발에 적합한 LTS 기준이다.
+- Eclipse Temurin은 OpenJDK 기반의 무난하고 널리 쓰이는 JDK 배포판이다.
+- IntelliJ 프로젝트 JDK와 WSL 터미널의 `JAVA_HOME`을 모두 Java 21 계열로 맞추면
+  Gradle wrapper, IDE 실행, shell test 실행 사이의 차이를 줄일 수 있다.
+- packaging은 Docker image와 수동 배포 흐름에 맞게 executable Jar로 시작한다.
+- 설정 파일은 YAML로 둔다. SSH port, bind address, demo credentials 같은 계층적 runtime
+  설정이 들어갈 가능성이 있어 `application.properties`보다 읽기 쉽다.
+- 첫 생성 시 Spring Web, Security, JPA, database, Actuator, Docker Compose Support는
+  추가하지 않는다. 첫 milestone은 embedded SSH intro 검증이며 HTTP API나 DB가 필요하지 않다.
+- Oracle JDK, Amazon Corretto, Microsoft OpenJDK, Azul Zulu, GraalVM도 가능한 선택지지만,
+  첫 milestone에서는 runtime vendor 차이보다 재현 가능하고 단순한 baseline이 더 중요하다.
+
+로컬 WSL 기준 확인 명령:
+
+```bash
+java -version
+echo "$JAVA_HOME"
+./gradlew test
+```
+
+`JAVA_HOME`은 SDKMAN이 관리하는 Java 21 경로를 가리켜야 한다. 예:
+
+```text
+/home/hchjeong/.sdkman/candidates/java/current
+```
+
 ### SSH
 
 Apache MINA SSHD를 우선 후보로 둔다.
