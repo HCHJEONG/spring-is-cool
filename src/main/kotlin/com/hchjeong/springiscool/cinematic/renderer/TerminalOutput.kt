@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 
 class TerminalOutput(
     private val output: OutputStream,
+    private val theme: TerminalTheme = GreenCrtTerminalTheme,
 ) {
     fun write(text: String) {
         output.write(text.toByteArray(StandardCharsets.UTF_8))
@@ -16,7 +17,7 @@ class TerminalOutput(
     }
 
     fun writeStyled(text: String, style: SceneStyle) {
-        write("${ansiFor(style)}$text$RESET")
+        write("${theme.ansiFor(style)}$text$RESET")
     }
 
     fun writeStyledLine(text: String = "", style: SceneStyle) {
@@ -60,15 +61,6 @@ class TerminalOutput(
 
     fun restorePromptPlaceholder() {
         write("_\b")
-    }
-
-    private fun ansiFor(style: SceneStyle): String {
-        return when (style) {
-            SceneStyle.NARRATION -> "\u001B[38;5;114m"
-            SceneStyle.SIGNAL -> "\u001B[38;5;191;1m"
-            SceneStyle.PROMPT -> "\u001B[38;5;120;1m"
-            SceneStyle.SYSTEM -> "\u001B[38;5;81m"
-        }
     }
 
     companion object {

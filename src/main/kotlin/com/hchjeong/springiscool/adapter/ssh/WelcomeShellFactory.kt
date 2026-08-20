@@ -12,6 +12,9 @@ import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 import com.hchjeong.springiscool.cinematic.renderer.CinematicTextRenderer
 import com.hchjeong.springiscool.cinematic.renderer.TerminalOutput
+import com.hchjeong.springiscool.world.CommandResult
+import com.hchjeong.springiscool.world.WorldCommandHandler
+import com.hchjeong.springiscool.world.WorldSession
 
 private fun writeLine(writer: PrintWriter, text: String = "") {
     writer.print("$text\r\n")
@@ -21,13 +24,15 @@ private fun writeLine(writer: PrintWriter, text: String = "") {
 @Component
 class WelcomeShellFactory(
     private val renderer: CinematicTextRenderer,
+    private val commandHandler: WorldCommandHandler,
 ) : ShellFactory {
     override fun createShell(channel: ChannelSession): Command {
-        return WelcomeShellCommand(renderer)
+        return WelcomeShellCommand(renderer, commandHandler)
     }
 }
 private class WelcomeShellCommand(
     private val renderer: CinematicTextRenderer,
+    private val commandHandler: WorldCommandHandler,
 ) : Command {
     private var input: InputStream? = null
     private var output: OutputStream? = null
@@ -73,6 +78,7 @@ private class WelcomeShellCommand(
         val writer = PrintWriter(shellOutput.writer(StandardCharsets.UTF_8), true)
         val terminal = TerminalOutput(shellOutput)
         val lineBuffer = StringBuilder()
+        val worldSession = WorldSession()
         var promptPlaceholderVisible = false
 
         renderer.renderIntro(shellOutput)
@@ -98,14 +104,18 @@ private class WelcomeShellCommand(
 
                     writeLine(writer)
 
-                    if (line.equals("quit", ignoreCase = true) || line.equals("exit", ignoreCase = true)) {
-                        renderer.renderGoodbye(shellOutput)
-                        exitCallback?.onExit(0)
-                        return
-                    }
+                    when (val result = commandHandler.handle(worldSession, line)) {
+                        is CommandResult.Continue -> {
+                            renderer.render(shellOutput, result.scene)
+                            promptPlaceholderVisible = true
+                        }
 
-                    renderer.renderCommandResponse(shellOutput, line)
-                    promptPlaceholderVisible = true
+                        is CommandResult.Quit -> {
+                            renderer.render(shellOutput, result.scene)
+                            exitCallback?.onExit(0)
+                            return
+                        }
+                    }
                 }
 
                 '\b', 127.toChar() -> {

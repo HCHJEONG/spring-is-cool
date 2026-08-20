@@ -8,46 +8,81 @@ class CinematicTextRenderer(
     private val introSceneProvider: IntroSceneProvider,
 ) {
     fun renderIntro(output: OutputStream) {
-        val terminal = TerminalOutput(output)
+        render(output, introSceneProvider.welcomeScene())
+    }
 
-        terminal.clearScreen()
-        terminal.hideCursor()
+    fun render(
+        output: OutputStream,
+        scene: Scene,
+        theme: TerminalTheme = GreenCrtTerminalTheme,
+        timingProfile: TimingProfile = TimingProfile.CINEMATIC,
+    ) {
+        val terminal = TerminalOutput(output, theme)
+        val canvas = TerminalCanvas(scene.terminalWidth)
+
+        if (scene.clearBefore) {
+            terminal.clearScreen()
+        }
+
+        if (scene.hideCursorDuringPlayback) {
+            terminal.hideCursor()
+        }
 
         try {
-            introSceneProvider.welcomeLines().forEach { line ->
+            scene.lines.forEach { line ->
                 if (Thread.currentThread().isInterrupted) {
                     return
                 }
 
-                when (line.reveal) {
-                    RevealMode.INSTANT -> terminal.writeStyledLine(line.text, line.style)
-                    RevealMode.TYPEWRITER -> writeSlowly(terminal, line)
-                }
-
-                Thread.sleep(line.delayAfterMillis)
+                renderLine(terminal, canvas, line, timingProfile)
+                sleep(timingProfile.lineDelay(line.delayAfterMillis))
             }
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             return
         } finally {
-            terminal.showCursor()
+            if (scene.hideCursorDuringPlayback) {
+                terminal.showCursor()
+            }
         }
 
-        terminal.writeLine()
-        terminal.prompt()
+        if (scene.showPromptAfter) {
+            terminal.writeLine()
+            terminal.prompt()
+        }
     }
 
-    private fun writeSlowly(terminal: TerminalOutput, line: IntroSceneLine) {
+    private fun renderLine(
+        terminal: TerminalOutput,
+        canvas: TerminalCanvas,
+        line: SceneLine,
+        timingProfile: TimingProfile,
+    ) {
+        terminal.write(canvas.padFor(line.text, line.alignment))
+
+        when (line.reveal) {
+            RevealMode.INSTANT -> terminal.writeStyledLine(line.text, line.style)
+            RevealMode.TYPEWRITER -> writeSlowly(terminal, line, timingProfile)
+        }
+    }
+
+    private fun writeSlowly(terminal: TerminalOutput, line: SceneLine, timingProfile: TimingProfile) {
         line.text.forEach { char ->
             if (Thread.currentThread().isInterrupted) {
                 return
             }
 
             terminal.writeStyled(char.toString(), line.style)
-            Thread.sleep(delayAfterCharacterMillis(char, line.characterDelayMillis))
+            sleep(timingProfile.characterDelay(delayAfterCharacterMillis(char, line.characterDelayMillis)))
         }
 
         terminal.newLine()
+    }
+
+    private fun sleep(delayMillis: Long) {
+        if (delayMillis > 0) {
+            Thread.sleep(delayMillis)
+        }
     }
 
     private fun delayAfterCharacterMillis(char: Char, defaultDelayMillis: Long): Long {
@@ -57,18 +92,4 @@ class CinematicTextRenderer(
         }
     }
 
-    fun renderCommandResponse(output: OutputStream, line: String) {
-        val terminal = TerminalOutput(output)
-
-        if (line.isNotEmpty()) {
-            terminal.writeStyledLine("You said: $line", SceneStyle.SYSTEM)
-        }
-
-        terminal.prompt()
-    }
-
-    fun renderGoodbye(output: OutputStream) {
-        val terminal = TerminalOutput(output)
-        terminal.writeStyledLine("Bye.", SceneStyle.SYSTEM)
-    }
 }
