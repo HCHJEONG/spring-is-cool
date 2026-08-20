@@ -556,6 +556,14 @@ AI가 raw terminal을 제어하지 않고, world state와 asset library를 바�
 - invalid AI output이 session을 깨뜨리지 않는다.
 - AI를 끄고도 fake/static director로 시스템이 작동한다.
 
+### Current Implementation Notes
+
+- `AI ...` command opens the first AI Director channel from the SSH world loop.
+- The default director is deterministic/static, so local tests and demo deploys do not require a live provider.
+- AI Director output is expressed as `SceneDefinition` and must pass `SceneDefinitionValidator` before rendering.
+- Provider/runtime settings are prepared through `.env.local`, including `SPRING_IS_COOL_AI_*`, `GOOGLE_CLOUD_*`, `VERTEX_AI_MODEL_ID`, and `GOOGLE_APPLICATION_CREDENTIALS`.
+- `aws-demo` and `dev-demo` mount `gcp-key.json` outside the Docker image and pass runtime settings through `--env-file`.
+
 ## 9. Milestone 9: Durable World Persistence
 
 ### Goal

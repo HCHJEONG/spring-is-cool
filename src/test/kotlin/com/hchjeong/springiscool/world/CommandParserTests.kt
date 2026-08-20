@@ -13,6 +13,7 @@ class CommandParserTests {
         assertEquals(WorldCommand.Quit, parser.parse("exit"))
         assertEquals(WorldCommand.Log, parser.parse("remember"))
         assertEquals(WorldCommand.Status, parser.parse("stat"))
+        assertEquals(WorldCommand.Ai("what is listening?"), parser.parse("ai what is listening?"))
     }
 
     @Test

@@ -1,5 +1,8 @@
 package com.hchjeong.springiscool.world
 
+import com.hchjeong.springiscool.ai.AiDirector
+import com.hchjeong.springiscool.ai.AiDirectorRequest
+import com.hchjeong.springiscool.ai.WorldSummary
 import com.hchjeong.springiscool.cinematic.renderer.RevealMode
 import com.hchjeong.springiscool.cinematic.renderer.Scene
 import com.hchjeong.springiscool.cinematic.renderer.SceneAlignment
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Component
 @Component
 class WorldCommandHandler(
     private val parser: CommandParser,
+    private val aiDirector: AiDirector,
 ) {
     fun handle(session: WorldSession, input: String): CommandResult {
         return when (val command = parser.parse(input)) {
@@ -21,6 +25,7 @@ class WorldCommandHandler(
             WorldCommand.Status -> CommandResult.Continue(statusScene(session))
             WorldCommand.Help -> CommandResult.Continue(helpScene(session))
             WorldCommand.Quit -> CommandResult.Quit(goodbyeScene())
+            is WorldCommand.Ai -> CommandResult.Continue(aiScene(session, command.text))
             is WorldCommand.Unknown -> CommandResult.Continue(unknownScene(session, command.text))
         }
     }
@@ -113,6 +118,7 @@ class WorldCommandHandler(
                 line("  ANSWER   pick up the telephone", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  STATUS   read the current world state", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  LOG      replay recent events", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  AI ...   ask the director for a scene", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  QUIT     close the line", SceneStyle.MUTED, RevealMode.INSTANT, 160),
                 blank(120),
@@ -132,6 +138,45 @@ class WorldCommandHandler(
                 line("The system does not recognize `$input`.", SceneStyle.WARNING, delayAfterMillis = 360),
                 line("Type HELP if the room feels too quiet.", SceneStyle.MUTED, delayAfterMillis = 240),
                 line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
+            ),
+        )
+    }
+
+    private fun aiScene(session: WorldSession, text: String): Scene {
+        if (text.isBlank()) {
+            session.record(
+                action = WorldAction.RequestedAiDirector,
+                observation = "The operator opened the AI director channel without a question.",
+            )
+
+            return Scene(
+                lines = listOf(
+                    line("AI DIRECTOR", SceneStyle.SYSTEM, RevealMode.INSTANT, 200),
+                    line("Give the line a sentence after AI.", SceneStyle.MUTED, delayAfterMillis = 260),
+                    line("Example: AI what is listening in this room?", SceneStyle.MUTED, RevealMode.INSTANT, 160),
+                ),
+            )
+        }
+
+        val event = session.record(
+            action = WorldAction.RequestedAiDirector,
+            observation = "The operator asked the AI director: $text",
+        )
+
+        val result = aiDirector.direct(
+            AiDirectorRequest(
+                userText = text,
+                worldSummary = WorldSummary.from(session),
+                availableTextArt = TextArtLibrary.assetNames(),
+            ),
+        )
+
+        return result.scene.copy(
+            lines = result.scene.lines + line(
+                text = "EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.",
+                style = SceneStyle.SYSTEM,
+                reveal = RevealMode.INSTANT,
+                delayAfterMillis = 180,
             ),
         )
     }

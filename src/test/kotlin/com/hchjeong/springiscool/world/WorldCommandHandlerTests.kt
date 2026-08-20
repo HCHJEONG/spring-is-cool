@@ -1,12 +1,17 @@
 package com.hchjeong.springiscool.world
 
+import com.hchjeong.springiscool.ai.StaticAiDirector
+import com.hchjeong.springiscool.cinematic.scene.SceneDefinitionLoader
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class WorldCommandHandlerTests {
-    private val handler = WorldCommandHandler(CommandParser())
+    private val handler = WorldCommandHandler(
+        CommandParser(),
+        StaticAiDirector(SceneDefinitionLoader()),
+    )
 
     @Test
     fun `answer changes telephone state and later look reflects it`() {
@@ -59,6 +64,18 @@ class WorldCommandHandlerTests {
 
         assertIs<CommandResult.Continue>(result)
         assertTrue(session.history().any { it.action is WorldAction.UnknownCommand })
+        assertTrue(result.scene.lines.any { it.text.contains("EVENT") })
+    }
+
+    @Test
+    fun `ai command records event and returns validated scene`() {
+        val session = WorldSession()
+
+        val result = handler.handle(session, "ai what is listening?")
+
+        assertIs<CommandResult.Continue>(result)
+        assertTrue(session.history().any { it.action == WorldAction.RequestedAiDirector })
+        assertTrue(result.scene.lines.any { it.text.contains("AI DIRECTOR") })
         assertTrue(result.scene.lines.any { it.text.contains("EVENT") })
     }
 

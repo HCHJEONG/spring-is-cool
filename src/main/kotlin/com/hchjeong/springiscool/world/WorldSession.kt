@@ -89,6 +89,10 @@ sealed interface WorldAction {
         override val verb = "STATUS"
     }
 
+    data object RequestedAiDirector : WorldAction {
+        override val verb = "AI"
+    }
+
     data class UnknownCommand(val text: String) : WorldAction {
         override val verb = "UNKNOWN"
     }

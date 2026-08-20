@@ -32,6 +32,10 @@ object TextArtLibrary {
         return assets[id]
     }
 
+    fun assetNames(): List<String> {
+        return assets.keys.sorted()
+    }
+
     fun assetLine(id: String, style: SceneStyle = SceneStyle.SIGNAL, delayAfterMillis: Long = 700): SceneLine {
         val asset = requireNotNull(asset(id)) { "Unknown text art asset: $id" }
 

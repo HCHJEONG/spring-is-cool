@@ -13,3 +13,9 @@ spring-is-cool:
     demo-user: demo
     demo-password: demo
     host-key-path: build/ssh/hostkey.ser
+  ai:
+    enabled: false
+    provider: static
+    project: ${GOOGLE_CLOUD_PROJECT:}
+    location: ${GOOGLE_CLOUD_LOCATION:}
+    model-id: ${VERTEX_AI_MODEL_ID:}
