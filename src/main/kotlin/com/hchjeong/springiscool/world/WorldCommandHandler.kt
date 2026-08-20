@@ -45,16 +45,16 @@ class WorldCommandHandler(
             observation = "The operator inspected the office.",
         )
 
-        val telephoneLine = if (session.telephoneRinging) {
-            "The telephone is still ringing."
-        } else {
-            "The telephone rests in its cradle of silence."
+        val telephoneLine = when {
+            session.telephoneRinging -> "The telephone is still ringing."
+            session.lineOffline -> "The telephone rests in its cradle. The line is offline."
+            else -> "The telephone rests in its cradle of silence."
         }
 
-        val lineState = if (session.lineAnswered) {
-            "The open line breathes faintly."
-        } else {
-            "No one has answered."
+        val lineState = when {
+            session.lineOffline -> "The caller is gone, but the instruction remains."
+            session.lineAnswered -> "The open line breathes faintly."
+            else -> "No one has answered."
         }
 
         return Scene(
@@ -73,22 +73,26 @@ class WorldCommandHandler(
         if (!session.answerTelephone()) {
             session.record(
                 action = WorldAction.AnsweredTelephone,
-                observation = "The operator listened again to an already open line.",
+                observation = "The operator tried the receiver after the line went offline.",
             )
 
             return Scene(
                 lines = listOf(
-                    line("The receiver is already warm in your hand.", delayAfterMillis = 360),
+                    line("You lift the receiver again.", delayAfterMillis = 360),
                     blank(160),
-                    line("UNKNOWN CALLER:", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
-                    line("\"I said, you are late.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
+                    line("No carrier. No breath. No caller.", SceneStyle.MUTED, delayAfterMillis = 360),
+                    line("The line is offline.", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
                 ),
             )
         }
 
-        session.record(
+        val answer = session.record(
             action = WorldAction.AnsweredTelephone,
-            observation = "The operator answered the ringing telephone.",
+            observation = "The operator answered the ringing telephone and received the caller's instruction.",
+        )
+        val offline = session.record(
+            action = WorldAction.LineWentOffline,
+            observation = "The caller said goodbye and the telephone line went offline.",
         )
 
         return Scene(
@@ -100,7 +104,18 @@ class WorldCommandHandler(
                 line("A carrier tone breathes on the line.", delayAfterMillis = 520),
                 blank(180),
                 line("UNKNOWN CALLER:", SceneStyle.SYSTEM, RevealMode.INSTANT, 250),
-                line("\"You are late.\"", SceneStyle.DIALOGUE, delayAfterMillis = 600),
+                line("\"You are late.\"", SceneStyle.DIALOGUE, delayAfterMillis = 460),
+                line("\"Look around the office. Type LOOK.\"", SceneStyle.DIALOGUE, delayAfterMillis = 560),
+                line("\"Goodbye.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
+                blank(180),
+                line("The line goes offline.", SceneStyle.SYSTEM, RevealMode.INSTANT, 260),
+                line(
+                    "EVENTS ${answer.sequence.toString().padStart(3, '0')}, " +
+                        "${offline.sequence.toString().padStart(3, '0')} RECORDED.",
+                    SceneStyle.SYSTEM,
+                    RevealMode.INSTANT,
+                    180,
+                ),
             ),
         )
     }
@@ -295,7 +310,11 @@ class WorldCommandHandler(
         )
 
         val phoneState = if (session.telephoneRinging) "RINGING" else "SILENT"
-        val lineState = if (session.lineAnswered) "OPEN" else "UNANSWERED"
+        val lineState = when {
+            session.lineOffline -> "OFFLINE"
+            session.lineAnswered -> "OPEN"
+            else -> "UNANSWERED"
+        }
 
         return Scene(
             lines = listOf(

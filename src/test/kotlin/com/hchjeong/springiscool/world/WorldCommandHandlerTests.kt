@@ -21,11 +21,14 @@ class WorldCommandHandlerTests {
         assertIs<CommandResult.Continue>(answer)
         assertFalse(session.telephoneRinging)
         assertTrue(session.lineAnswered)
+        assertTrue(session.lineOffline)
+        assertTrue(answer.scene.lines.any { it.text.contains("Type LOOK") })
+        assertTrue(answer.scene.lines.any { it.text.contains("line goes offline") })
 
         val look = handler.handle(session, "look")
         assertIs<CommandResult.Continue>(look)
-        assertTrue(look.scene.lines.any { it.text.contains("rests in its cradle") })
-        assertTrue(look.scene.lines.any { it.text.contains("open line") })
+        assertTrue(look.scene.lines.any { it.text.contains("line is offline") })
+        assertTrue(look.scene.lines.any { it.text.contains("instruction remains") })
     }
 
     @Test
@@ -39,9 +42,11 @@ class WorldCommandHandlerTests {
         assertIs<CommandResult.Continue>(log)
         assertTrue(session.history().any { it.action == WorldAction.Looked })
         assertTrue(session.history().any { it.action == WorldAction.AnsweredTelephone })
+        assertTrue(session.history().any { it.action == WorldAction.LineWentOffline })
         assertTrue(session.history().any { it.action == WorldAction.RequestedHistory })
         assertTrue(log.scene.lines.any { it.text.contains("LOCAL EVENT LOG") })
         assertTrue(log.scene.lines.any { it.text.contains("ANSWER") })
+        assertTrue(log.scene.lines.any { it.text.contains("OFFLINE") })
     }
 
     @Test
@@ -53,7 +58,7 @@ class WorldCommandHandlerTests {
 
         assertIs<CommandResult.Continue>(status)
         assertTrue(status.scene.lines.any { it.text.contains("TELEPHONE   SILENT") })
-        assertTrue(status.scene.lines.any { it.text.contains("LINE        OPEN") })
+        assertTrue(status.scene.lines.any { it.text.contains("LINE        OFFLINE") })
     }
 
     @Test

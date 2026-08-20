@@ -41,6 +41,7 @@ class SQLiteWorldEventStoreTests {
         val first = WorldSession(sessionId = "test-office", eventStore = store)
         first.answerTelephone()
         first.record(WorldAction.AnsweredTelephone, "The operator answered the ringing telephone.")
+        first.record(WorldAction.LineWentOffline, "The caller said goodbye and the telephone line went offline.")
 
         val restored = WorldSession(
             sessionId = "test-office",
@@ -49,6 +50,7 @@ class SQLiteWorldEventStoreTests {
         )
 
         assertTrue(restored.lineAnswered)
+        assertTrue(restored.lineOffline)
         assertFalse(restored.telephoneRinging)
         assertEquals(first.history().size, restored.history().size)
     }

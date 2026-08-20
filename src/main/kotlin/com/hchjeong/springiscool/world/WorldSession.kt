@@ -19,9 +19,16 @@ class WorldSession(
     var lineAnswered: Boolean = false
         private set
 
+    var lineOffline: Boolean = false
+        private set
+
     init {
         if (events.any { it.action == WorldAction.AnsweredTelephone }) {
             lineAnswered = true
+            telephoneRinging = false
+        }
+        if (events.any { it.action == WorldAction.LineWentOffline } || lineAnswered) {
+            lineOffline = true
             telephoneRinging = false
         }
 
@@ -61,12 +68,13 @@ class WorldSession(
     }
 
     fun answerTelephone(): Boolean {
-        if (lineAnswered) {
+        if (!telephoneRinging) {
             return false
         }
 
         lineAnswered = true
         telephoneRinging = false
+        lineOffline = true
         return true
     }
 
@@ -123,6 +131,10 @@ sealed interface WorldAction {
         override val verb = "ANSWER"
     }
 
+    data object LineWentOffline : WorldAction {
+        override val verb = "OFFLINE"
+    }
+
     data object RequestedHelp : WorldAction {
         override val verb = "HELP"
     }
@@ -161,6 +173,7 @@ sealed interface WorldAction {
                 "SYSTEM" -> SystemOpened
                 "LOOK" -> Looked
                 "ANSWER" -> AnsweredTelephone
+                "OFFLINE" -> LineWentOffline
                 "HELP" -> RequestedHelp
                 "LOG" -> RequestedHistory
                 "STATUS" -> CheckedStatus
