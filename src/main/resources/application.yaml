@@ -19,3 +19,8 @@ spring-is-cool:
     project: ${GOOGLE_CLOUD_PROJECT:}
     location: ${GOOGLE_CLOUD_LOCATION:}
     model-id: ${VERTEX_AI_MODEL_ID:}
+  persistence:
+    enabled: true
+    type: sqlite
+    sqlite-path: ${SPRING_IS_COOL_PERSISTENCE_SQLITE_PATH:build/data/world.sqlite}
+    session-id: ${SPRING_IS_COOL_PERSISTENCE_SESSION_ID:default-office}

@@ -58,7 +58,14 @@ application runtime directory:
 ```text
 /home/hchjeong/spring-is-cool/.env.local
 /home/hchjeong/spring-is-cool/gcp-key.json
+/home/hchjeong/spring-is-cool/data/world.sqlite
 /home/hchjeong/spring-is-cool/runtime/ssh/hostkey.ser
+```
+
+Initialize those files before the first deployment:
+
+```bash
+.fordeploy/init-dev-demo-runtime.sh
 ```
 
 If the dev-demo host firewall blocks inbound app SSH traffic, open the selected
@@ -93,7 +100,14 @@ application runtime directory:
 ```text
 /home/ubuntu/spring-is-cool/.env.local
 /home/ubuntu/spring-is-cool/gcp-key.json
+/home/ubuntu/spring-is-cool/data/world.sqlite
 /home/ubuntu/spring-is-cool/runtime/ssh/hostkey.ser
+```
+
+Initialize those files before the first deployment:
+
+```bash
+.fordeploy/init-aws-demo-runtime.sh
 ```
 
 Older deployments used `/srv/spring-is-cool`, but that legacy runtime directory

@@ -12,3 +12,12 @@ Thumbs.db
 *.log
 *.tar
 *.tar.gz
+
+# Runtime data and secrets belong to each deployment instance, not the repo.
+data/
+runtime/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+gcp-key.json
+hostkey.ser

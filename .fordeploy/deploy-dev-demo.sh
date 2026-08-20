@@ -12,6 +12,7 @@ set -euo pipefail
 : "${REMOTE_APP_DIR:=/home/hchjeong/spring-is-cool}"
 : "${REMOTE_ENV_FILE:=${REMOTE_APP_DIR}/.env.local}"
 : "${REMOTE_GCP_KEY_FILE:=${REMOTE_APP_DIR}/gcp-key.json}"
+: "${REMOTE_DATA_DIR:=${REMOTE_APP_DIR}/data}"
 : "${HOST_PORT:=2222}"
 : "${CONTAINER_PORT:=2222}"
 : "${CONFIGURE_UFW:=0}"
@@ -61,12 +62,16 @@ ssh "$TARGET_HOST" \
   REMOTE_IMAGE_DIR="$REMOTE_IMAGE_DIR" \
   REMOTE_APP_DIR="$REMOTE_APP_DIR" \
   REMOTE_ENV_FILE="$REMOTE_ENV_FILE" \
+  REMOTE_DATA_DIR="$REMOTE_DATA_DIR" \
   HOST_PORT="$HOST_PORT" \
   CONFIGURE_UFW="$CONFIGURE_UFW" \
   bash -s <<'REMOTE_PREP'
 set -euo pipefail
-mkdir -p "$REMOTE_IMAGE_DIR" "$REMOTE_APP_DIR/runtime/ssh"
+mkdir -p "$REMOTE_IMAGE_DIR" "$REMOTE_APP_DIR/runtime/ssh" "$REMOTE_DATA_DIR"
 chmod 700 "$REMOTE_APP_DIR/runtime/ssh"
+touch "$REMOTE_DATA_DIR/world.sqlite"
+chmod 700 "$REMOTE_DATA_DIR"
+chmod 600 "$REMOTE_DATA_DIR/world.sqlite"
 if [ ! -f "$REMOTE_ENV_FILE" ]; then
   umask 177
   cat > "$REMOTE_ENV_FILE" <<'EOF'
@@ -78,6 +83,10 @@ SPRING_IS_COOL_SSH_DEMO_PASSWORD=demo
 SPRING_IS_COOL_SSH_HOST_KEY_PATH=/app/runtime/ssh/hostkey.ser
 SPRING_IS_COOL_AI_ENABLED=false
 SPRING_IS_COOL_AI_PROVIDER=static
+SPRING_IS_COOL_PERSISTENCE_ENABLED=true
+SPRING_IS_COOL_PERSISTENCE_TYPE=sqlite
+SPRING_IS_COOL_PERSISTENCE_SQLITE_PATH=/app/data/world.sqlite
+SPRING_IS_COOL_PERSISTENCE_SESSION_ID=dev-demo-office
 GOOGLE_CLOUD_PROJECT=
 GOOGLE_CLOUD_LOCATION=
 VERTEX_AI_MODEL_ID=
@@ -85,6 +94,19 @@ GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
 EOF
 fi
 chmod 600 "$REMOTE_ENV_FILE"
+ensure_env_key() {
+  local key="$1"
+  local value="$2"
+  if ! grep -q "^${key}=" "$REMOTE_ENV_FILE"; then
+    printf '%s=%s\n' "$key" "$value" >> "$REMOTE_ENV_FILE"
+  fi
+}
+ensure_env_key SPRING_IS_COOL_AI_ENABLED false
+ensure_env_key SPRING_IS_COOL_AI_PROVIDER static
+ensure_env_key SPRING_IS_COOL_PERSISTENCE_ENABLED true
+ensure_env_key SPRING_IS_COOL_PERSISTENCE_TYPE sqlite
+ensure_env_key SPRING_IS_COOL_PERSISTENCE_SQLITE_PATH /app/data/world.sqlite
+ensure_env_key SPRING_IS_COOL_PERSISTENCE_SESSION_ID dev-demo-office
 if [ "$CONFIGURE_UFW" = "1" ] && command -v ufw >/dev/null 2>&1; then
   sudo ufw allow "${HOST_PORT}/tcp"
 fi
@@ -100,6 +122,7 @@ ssh "$TARGET_HOST" \
   REMOTE_APP_DIR="$REMOTE_APP_DIR" \
   REMOTE_ENV_FILE="$REMOTE_ENV_FILE" \
   REMOTE_GCP_KEY_FILE="$REMOTE_GCP_KEY_FILE" \
+  REMOTE_DATA_DIR="$REMOTE_DATA_DIR" \
   IMAGE="$IMAGE" \
   CONTAINER_NAME="$CONTAINER_NAME" \
   HOST_PORT="$HOST_PORT" \
@@ -124,6 +147,7 @@ RUN_ARGS=(
   -p "0.0.0.0:${HOST_PORT}:${CONTAINER_PORT}"
   --env-file "$REMOTE_ENV_FILE"
   -v "${REMOTE_APP_DIR}/runtime/ssh:/app/runtime/ssh"
+  -v "${REMOTE_DATA_DIR}:/app/data"
 )
 
 if [ -f "$REMOTE_GCP_KEY_FILE" ]; then

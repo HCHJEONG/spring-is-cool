@@ -12,9 +12,9 @@ import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 import com.hchjeong.springiscool.cinematic.renderer.CinematicTextRenderer
 import com.hchjeong.springiscool.cinematic.renderer.TerminalOutput
+import com.hchjeong.springiscool.persistence.WorldSessionFactory
 import com.hchjeong.springiscool.world.CommandResult
 import com.hchjeong.springiscool.world.WorldCommandHandler
-import com.hchjeong.springiscool.world.WorldSession
 
 private fun writeLine(writer: PrintWriter, text: String = "") {
     writer.print("$text\r\n")
@@ -25,14 +25,16 @@ private fun writeLine(writer: PrintWriter, text: String = "") {
 class WelcomeShellFactory(
     private val renderer: CinematicTextRenderer,
     private val commandHandler: WorldCommandHandler,
+    private val worldSessionFactory: WorldSessionFactory,
 ) : ShellFactory {
     override fun createShell(channel: ChannelSession): Command {
-        return WelcomeShellCommand(renderer, commandHandler)
+        return WelcomeShellCommand(renderer, commandHandler, worldSessionFactory)
     }
 }
 private class WelcomeShellCommand(
     private val renderer: CinematicTextRenderer,
     private val commandHandler: WorldCommandHandler,
+    private val worldSessionFactory: WorldSessionFactory,
 ) : Command {
     private var input: InputStream? = null
     private var output: OutputStream? = null
@@ -78,7 +80,7 @@ private class WelcomeShellCommand(
         val writer = PrintWriter(shellOutput.writer(StandardCharsets.UTF_8), true)
         val terminal = TerminalOutput(shellOutput)
         val lineBuffer = StringBuilder()
-        val worldSession = WorldSession()
+        val worldSession = worldSessionFactory.create()
         var promptPlaceholderVisible = false
 
         renderer.renderIntro(shellOutput)

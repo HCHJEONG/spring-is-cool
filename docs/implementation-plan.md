@@ -603,6 +603,16 @@ AI가 raw terminal을 제어하지 않고, world state와 asset library를 바�
 - persistence implementation이 world core에 새지 않는다.
 - deployment script가 app redeploy 시 DB를 재생성하지 않는다.
 
+### Current Implementation Direction
+
+- Use a swappable `WorldEventStore` port so PostgreSQL can replace SQLite later.
+- Start with a SQLite adapter, not a plain file log, because the future PostgreSQL shape should stay natural.
+- Keep each instance's DB file outside the image under its runtime directory:
+  - `dev-demo`: `/home/hchjeong/spring-is-cool/data/world.sqlite`
+  - `aws-demo`: `/home/ubuntu/spring-is-cool/data/world.sqlite`
+- Prepare DB files through target-specific init scripts before first deployment.
+- App deploy scripts mount `data/` into the container and must not delete or recreate the DB.
+
 ## 10. Milestone 10: Presentation Adapter Expansion
 
 ### Goal
