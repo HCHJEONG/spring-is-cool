@@ -10,4 +10,5 @@ data class AiDirectorProperties(
     val location: String = "global",
     val modelId: String = "gemini-2.5-flash-lite",
     val timeoutMillis: Long = 15_000,
+    val monthlyCallLimit: Int = 250,
 )

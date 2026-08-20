@@ -15,6 +15,7 @@ import com.hchjeong.springiscool.cinematic.renderer.TerminalOutput
 import com.hchjeong.springiscool.persistence.WorldSessionFactory
 import com.hchjeong.springiscool.presentation.InteractionOutcome
 import com.hchjeong.springiscool.presentation.WorldInteractionService
+import com.hchjeong.springiscool.world.PresenceRegistry
 
 private fun writeLine(writer: PrintWriter, text: String = "") {
     writer.print("$text\r\n")
@@ -26,15 +27,17 @@ class WelcomeShellFactory(
     private val renderer: CinematicTextRenderer,
     private val worldInteractionService: WorldInteractionService,
     private val worldSessionFactory: WorldSessionFactory,
+    private val presenceRegistry: PresenceRegistry,
 ) : ShellFactory {
     override fun createShell(channel: ChannelSession): Command {
-        return WelcomeShellCommand(renderer, worldInteractionService, worldSessionFactory)
+        return WelcomeShellCommand(renderer, worldInteractionService, worldSessionFactory, presenceRegistry)
     }
 }
 private class WelcomeShellCommand(
     private val renderer: CinematicTextRenderer,
     private val worldInteractionService: WorldInteractionService,
     private val worldSessionFactory: WorldSessionFactory,
+    private val presenceRegistry: PresenceRegistry,
 ) : Command {
     private var input: InputStream? = null
     private var output: OutputStream? = null
@@ -81,68 +84,73 @@ private class WelcomeShellCommand(
         val terminal = TerminalOutput(shellOutput)
         val lineBuffer = StringBuilder()
         val worldSession = worldSessionFactory.create()
+        val presenceLease = presenceRegistry.enterSsh()
         var promptPlaceholderVisible = false
 
-        renderer.renderIntro(shellOutput)
-        promptPlaceholderVisible = true
+        try {
+            renderer.renderIntro(shellOutput)
+            promptPlaceholderVisible = true
 
-        while (!Thread.currentThread().isInterrupted) {
-            val next = shellInput.read()
-            if (next == -1) {
-                break
+            while (!Thread.currentThread().isInterrupted) {
+                val next = shellInput.read()
+                if (next == -1) {
+                    break
+                }
+
+                val char = next.toChar()
+
+                when (char) {
+                    '\r', '\n' -> {
+                        val line = lineBuffer.toString().trim()
+                        lineBuffer.clear()
+
+                        if (promptPlaceholderVisible) {
+                            terminal.erasePromptPlaceholder()
+                            promptPlaceholderVisible = false
+                        }
+
+                        writeLine(writer)
+
+                        val result = worldInteractionService.submit(worldSession, line)
+                        renderer.render(shellOutput, result.rendererScene)
+
+                        when (result.outcome) {
+                            InteractionOutcome.CONTINUE -> {
+                                promptPlaceholderVisible = true
+                            }
+
+                            InteractionOutcome.QUIT -> {
+                                exitCallback?.onExit(0)
+                                return
+                            }
+                        }
+                    }
+
+                    '\b', 127.toChar() -> {
+                        if (lineBuffer.isNotEmpty()) {
+                            lineBuffer.deleteCharAt(lineBuffer.length - 1)
+                            terminal.erasePreviousCharacter()
+
+                            if (lineBuffer.isEmpty()) {
+                                terminal.restorePromptPlaceholder()
+                                promptPlaceholderVisible = true
+                            }
+                        }
+                    }
+
+                    else -> {
+                        if (promptPlaceholderVisible) {
+                            promptPlaceholderVisible = false
+                        }
+
+                        lineBuffer.append(char)
+                        writer.print(char)
+                        writer.flush()
+                    }
+                }
             }
-
-            val char = next.toChar()
-
-            when (char) {
-                '\r', '\n' -> {
-                    val line = lineBuffer.toString().trim()
-                    lineBuffer.clear()
-
-                    if (promptPlaceholderVisible) {
-                        terminal.erasePromptPlaceholder()
-                        promptPlaceholderVisible = false
-                    }
-
-                    writeLine(writer)
-
-                    val result = worldInteractionService.submit(worldSession, line)
-                    renderer.render(shellOutput, result.rendererScene)
-
-                    when (result.outcome) {
-                        InteractionOutcome.CONTINUE -> {
-                            promptPlaceholderVisible = true
-                        }
-
-                        InteractionOutcome.QUIT -> {
-                            exitCallback?.onExit(0)
-                            return
-                        }
-                    }
-                }
-
-                '\b', 127.toChar() -> {
-                    if (lineBuffer.isNotEmpty()) {
-                        lineBuffer.deleteCharAt(lineBuffer.length - 1)
-                        terminal.erasePreviousCharacter()
-
-                        if (lineBuffer.isEmpty()) {
-                            terminal.restorePromptPlaceholder()
-                            promptPlaceholderVisible = true
-                        }
-                    }
-                }
-
-                else -> {
-                    if (promptPlaceholderVisible) {
-                        promptPlaceholderVisible = false
-                    }
-
-                    lineBuffer.append(char)
-                    writer.print(char)
-                    writer.flush()
-                }
-            }
+        } finally {
+            presenceLease.close()
         }
 
         exitCallback?.onExit(0)

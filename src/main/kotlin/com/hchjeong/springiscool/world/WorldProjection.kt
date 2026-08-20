@@ -2,6 +2,7 @@ package com.hchjeong.springiscool.world
 
 data class WorldProjection(
     val telephone: TelephoneProjection,
+    val presence: PresenceSnapshot,
     val activeInstruction: String?,
     val lastDelegation: DelegationProjection?,
     val lastEvidenceId: String?,
@@ -10,6 +11,12 @@ data class WorldProjection(
     val facts: List<String> = buildList {
         add("telephone=${telephone.state.name}")
         add("line=${telephone.lineState.name}")
+        add("users=${presence.activeUserCount}")
+        add("user-authority=${presence.userRole.authority.joinToString("|")}")
+        presence.agents.forEach { add("agent=${it.displayName}:${it.state}") }
+        presence.agents.forEach {
+            add("agent-authority=${it.displayName}:${it.authority.joinToString("|")}")
+        }
         activeInstruction?.let { add("instruction=$it") }
         lastDelegation?.let {
             add("delegation=${it.actorId}:${it.task}:${it.authority.name}")
@@ -19,11 +26,11 @@ data class WorldProjection(
     }
 
     companion object {
-        fun from(session: WorldSession): WorldProjection {
-            return from(session.history())
+        fun from(session: WorldSession, presence: PresenceSnapshot = PresenceSnapshot()): WorldProjection {
+            return from(session.history(), presence)
         }
 
-        fun from(events: List<WorldEvent>): WorldProjection {
+        fun from(events: List<WorldEvent>, presence: PresenceSnapshot = PresenceSnapshot()): WorldProjection {
             val answered = events.any { it.action == WorldAction.AnsweredTelephone }
             val offline = events.any { it.action == WorldAction.LineWentOffline } || answered
             val ringing = !answered && !offline
@@ -42,6 +49,7 @@ data class WorldProjection(
                         else -> LineState.UNANSWERED
                     },
                 ),
+                presence = presence,
                 activeInstruction = if (offline) {
                     "Look around the office. Type LOOK."
                 } else {

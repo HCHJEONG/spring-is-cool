@@ -134,6 +134,7 @@ target's `.env.local` before deployment:
 ```text
 SPRING_IS_COOL_AI_ENABLED=true
 SPRING_IS_COOL_AI_PROVIDER=gemini
+SPRING_IS_COOL_AI_MONTHLY_CALL_LIMIT=250
 GOOGLE_CLOUD_PROJECT=<project-id>
 GOOGLE_CLOUD_LOCATION=global
 VERTEX_AI_MODEL_ID=gemini-2.5-flash-lite

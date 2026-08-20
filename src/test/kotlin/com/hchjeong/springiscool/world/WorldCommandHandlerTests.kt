@@ -62,6 +62,37 @@ class WorldCommandHandlerTests {
     }
 
     @Test
+    fun `look and status show connected users and AI clerk presence`() {
+        val presenceRegistry = PresenceRegistry()
+        val firstUser = presenceRegistry.enterSsh()
+        val secondUser = presenceRegistry.enterSsh()
+        val handler = WorldCommandHandler(
+            CommandParser(),
+            StaticAiDirector(SceneDefinitionLoader()),
+            presenceRegistry,
+        )
+
+        try {
+            val look = handler.handle(WorldSession(), "look")
+            val status = handler.handle(WorldSession(), "status")
+
+            assertIs<CommandResult.Continue>(look)
+            assertIs<CommandResult.Continue>(status)
+            assertTrue(look.scene.lines.any { it.text.contains("Users in office: 2") })
+            assertTrue(look.scene.lines.any { it.text.contains("AI clerk terminal: STANDBY") })
+            assertTrue(look.scene.lines.any { it.text.contains("SSH users may: inspect office") })
+            assertTrue(look.scene.lines.any { it.text.contains("AI clerk may: check line state") })
+            assertTrue(status.scene.lines.any { it.text.contains("USERS       2") })
+            assertTrue(status.scene.lines.any { it.text.contains("AGENT       AI clerk: STANDBY") })
+            assertTrue(status.scene.lines.any { it.text.contains("AUTHORITY   SSH users: inspect office") })
+            assertTrue(status.scene.lines.any { it.text.contains("AUTHORITY   AI clerk: check line state") })
+        } finally {
+            firstUser.close()
+            secondUser.close()
+        }
+    }
+
+    @Test
     fun `unknown commands are recorded`() {
         val session = WorldSession()
 
@@ -88,15 +119,15 @@ class WorldCommandHandlerTests {
     fun `assign delegates allowed task to fake agent and attaches evidence`() {
         val session = WorldSession()
 
-        val result = handler.handle(session, "assign clerk check line")
+        val result = handler.handle(session, "assign AI clerk check line")
 
         assertIs<CommandResult.Continue>(result)
         assertTrue(session.history().any {
             it.action == WorldAction.AssignedTask &&
-                it.targetActorId == "clerk" &&
+                it.targetActorId == "ai-clerk" &&
                 it.authorityResult == AuthorityResult.ALLOWED
         })
-        assertTrue(session.history().any { it.actor.id == "clerk" && it.action == WorldAction.AgentReported })
+        assertTrue(session.history().any { it.actor.id == "ai-clerk" && it.action == WorldAction.AgentReported })
         assertTrue(session.history().any {
             it.action == WorldAction.EvidenceAttached &&
                 it.evidenceId == "carrier-tone-present"
@@ -122,12 +153,12 @@ class WorldCommandHandlerTests {
     fun `log shows actor authority target and evidence metadata`() {
         val session = WorldSession()
 
-        handler.handle(session, "assign clerk check line")
+        handler.handle(session, "assign AI clerk check line")
         val log = handler.handle(session, "log")
 
         assertIs<CommandResult.Continue>(log)
-        assertTrue(log.scene.lines.any { it.text.contains("operator:ASSIGN") && it.text.contains("target=clerk") })
-        assertTrue(log.scene.lines.any { it.text.contains("clerk:AGENT") && it.text.contains("authority=ALLOWED") })
+        assertTrue(log.scene.lines.any { it.text.contains("operator:ASSIGN") && it.text.contains("target=ai-clerk") })
+        assertTrue(log.scene.lines.any { it.text.contains("ai-clerk:AGENT") && it.text.contains("authority=ALLOWED") })
         assertTrue(log.scene.lines.any { it.text.contains("evidence=carrier-tone-present") })
     }
 

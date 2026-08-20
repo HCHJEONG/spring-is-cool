@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component
 class WorldCommandHandler(
     private val parser: CommandParser,
     private val aiDirector: AiDirector,
+    private val presenceRegistry: PresenceRegistry = PresenceRegistry(),
 ) {
     fun handle(session: WorldSession, input: String): CommandResult {
         return when (val command = parser.parse(input)) {
@@ -44,7 +45,7 @@ class WorldCommandHandler(
             action = WorldAction.Looked,
             observation = "The operator inspected the office.",
         )
-        val projection = WorldProjection.from(session)
+        val projection = WorldProjection.from(session, presenceRegistry.snapshot())
 
         val telephoneLine = when (projection.telephone.state) {
             TelephoneState.RINGING -> "The telephone is still ringing."
@@ -68,6 +69,35 @@ class WorldCommandHandler(
         val evidenceLines = projection.lastEvidenceId?.let {
             listOf(line("Evidence on file: $it", SceneStyle.MUTED, RevealMode.INSTANT, 180))
         } ?: emptyList()
+        val presenceLines = listOf(
+            line(
+                "Users in office: ${projection.presence.activeUserCount}",
+                SceneStyle.MUTED,
+                RevealMode.INSTANT,
+                180,
+            ),
+            line(
+                "SSH users may: ${projection.presence.userRole.authority.joinToString(", ")}",
+                SceneStyle.MUTED,
+                RevealMode.INSTANT,
+                160,
+            ),
+        ) + projection.presence.agents.map {
+            listOf(
+                line(
+                    "${it.displayName} terminal: ${it.state}",
+                    SceneStyle.MUTED,
+                    RevealMode.INSTANT,
+                    160,
+                ),
+                line(
+                    "${it.displayName} may: ${it.authority.joinToString(", ")}",
+                    SceneStyle.MUTED,
+                    RevealMode.INSTANT,
+                    160,
+                ),
+            )
+        }.flatten()
 
         return Scene(
             lines = listOf(
@@ -77,7 +107,8 @@ class WorldCommandHandler(
                 blank(180),
                 line(telephoneLine, delayAfterMillis = 360),
                 line(lineState, SceneStyle.MUTED, delayAfterMillis = 260),
-            ) + instructionLines + evidenceLines,
+                blank(120),
+            ) + presenceLines + instructionLines + evidenceLines,
         )
     }
 
@@ -147,7 +178,7 @@ class WorldCommandHandler(
                 line("  STATUS   read the current world state", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  LOG      replay recent events", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  AI ...   ask the director for a scene", SceneStyle.MUTED, RevealMode.INSTANT, 90),
-                line("  ASSIGN clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  ASSIGN AI clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  QUIT     close the line", SceneStyle.MUTED, RevealMode.INSTANT, 160),
                 blank(120),
@@ -195,7 +226,7 @@ class WorldCommandHandler(
         val result = aiDirector.direct(
             AiDirectorRequest(
                 userText = text,
-                worldSummary = WorldSummary.from(session),
+                worldSummary = WorldSummary.from(session, presenceRegistry.snapshot()),
                 availableTextArt = TextArtLibrary.assetNames(),
             ),
         )
@@ -222,14 +253,15 @@ class WorldCommandHandler(
                 lines = listOf(
                     line("ASSIGNMENT CHANNEL", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
                     line("Name an agent and a task.", SceneStyle.MUTED, delayAfterMillis = 240),
-                    line("Example: ASSIGN clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 180),
+                    line("Example: ASSIGN AI clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 180),
                 ),
             )
         }
 
         val normalizedAgent = agentId.lowercase()
         val normalizedTask = task.lowercase()
-        val allowed = normalizedAgent == "clerk" && normalizedTask == "check line"
+        val allowed = normalizedAgent in setOf("clerk", "ai-clerk") && normalizedTask == "check line"
+        val targetAgentId = "ai-clerk"
 
         if (!allowed) {
             val event = session.record(
@@ -252,29 +284,29 @@ class WorldCommandHandler(
 
         val assignment = session.record(
             action = WorldAction.AssignedTask,
-            observation = "The operator delegated `check line` to clerk.",
-            targetActorId = normalizedAgent,
+            observation = "The operator delegated `check line` to AI clerk.",
+            targetActorId = targetAgentId,
             authorityResult = AuthorityResult.ALLOWED,
         )
         val agentReport = session.record(
             action = WorldAction.AgentReported,
-            observation = "Clerk inspected the carrier signal and reported line noise.",
-            actor = Actor("clerk"),
+            observation = "AI clerk inspected the carrier signal and reported line noise.",
+            actor = Actor(targetAgentId),
             authorityResult = AuthorityResult.ALLOWED,
         )
         val evidence = session.record(
             action = WorldAction.EvidenceAttached,
             observation = "Evidence `carrier-tone-present` attached to the line check.",
-            actor = Actor("clerk"),
+            actor = Actor(targetAgentId),
             evidenceId = "carrier-tone-present",
         )
 
         return Scene(
             lines = listOf(
                 line("ASSIGNMENT ACCEPTED", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
-                line("You delegate the line check to CLERK.", delayAfterMillis = 360),
+                line("You delegate the line check to AI clerk.", delayAfterMillis = 360),
                 blank(140),
-                line("CLERK:", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
+                line("AI CLERK:", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
                 line("\"I can inspect the signal, not open the door.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
                 line("\"Carrier tone is present. Line noise is rising.\"", SceneStyle.DIALOGUE, delayAfterMillis = 460),
                 blank(120),
@@ -320,7 +352,7 @@ class WorldCommandHandler(
             action = WorldAction.CheckedStatus,
             observation = "The operator checked the current world state.",
         )
-        val projection = WorldProjection.from(session)
+        val projection = WorldProjection.from(session, presenceRegistry.snapshot())
 
         val phoneState = projection.telephone.state.name
         val lineState = projection.telephone.lineState.name
@@ -331,12 +363,43 @@ class WorldCommandHandler(
         val evidenceLine = projection.lastEvidenceId?.let {
             line("  EVIDENCE    $it", SceneStyle.MUTED, RevealMode.INSTANT, 120)
         }
+        val usersLine = line(
+            "  USERS       ${projection.presence.activeUserCount}",
+            SceneStyle.MUTED,
+            RevealMode.INSTANT,
+            120,
+        )
+        val agentLines = projection.presence.agents.map {
+            listOf(
+                line(
+                    "  AGENT       ${it.displayName}: ${it.state}",
+                    SceneStyle.MUTED,
+                    RevealMode.INSTANT,
+                    120,
+                ),
+                line(
+                    "  AUTHORITY   ${it.displayName}: ${it.authority.joinToString(", ")}",
+                    SceneStyle.MUTED,
+                    RevealMode.INSTANT,
+                    120,
+                ),
+            )
+        }.flatten()
+        val userAuthorityLine = line(
+            "  AUTHORITY   SSH users: ${projection.presence.userRole.authority.joinToString(", ")}",
+            SceneStyle.MUTED,
+            RevealMode.INSTANT,
+            120,
+        )
 
         return Scene(
             lines = listOfNotNull(
                 line("ONTOLOFFICE STATUS", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
                 line("  TELEPHONE   $phoneState", SceneStyle.MUTED, RevealMode.INSTANT, 120),
                 line("  LINE        $lineState", SceneStyle.MUTED, RevealMode.INSTANT, 120),
+                usersLine,
+                userAuthorityLine,
+                *agentLines.toTypedArray(),
                 instructionLine,
                 evidenceLine,
                 line("  EVENTS      ${projection.eventCount}", SceneStyle.MUTED, RevealMode.INSTANT, 160),

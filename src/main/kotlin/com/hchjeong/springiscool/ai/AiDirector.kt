@@ -2,7 +2,9 @@ package com.hchjeong.springiscool.ai
 
 import com.hchjeong.springiscool.cinematic.renderer.Scene
 import com.hchjeong.springiscool.cinematic.scene.SceneDefinition
+import com.hchjeong.springiscool.world.PresenceSnapshot
 import com.hchjeong.springiscool.world.WorldSession
+import com.hchjeong.springiscool.world.WorldProjection
 
 interface AiDirector {
     fun direct(request: AiDirectorRequest): AiDirectorResult
@@ -24,8 +26,8 @@ data class WorldSummary(
     val recentEvents: List<String>,
 ) {
     companion object {
-        fun from(session: WorldSession, maxEvents: Int = 6): WorldSummary {
-            val projection = com.hchjeong.springiscool.world.WorldProjection.from(session)
+        fun from(session: WorldSession, presence: PresenceSnapshot = PresenceSnapshot(), maxEvents: Int = 6): WorldSummary {
+            val projection = WorldProjection.from(session, presence)
             return WorldSummary(
                 actorId = session.actor.id,
                 telephoneRinging = session.telephoneRinging,

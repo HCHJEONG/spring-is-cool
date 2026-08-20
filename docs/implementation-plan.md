@@ -717,6 +717,12 @@ static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있�
 - 기존 `AiDirector` port 뒤에 real provider 연결
 - `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` runtime 설정 사용
 - provider timeout/retry/failure handling
+- provider monthly call limit
+  - default `SPRING_IS_COOL_AI_MONTHLY_CALL_LIMIT=250`
+  - usage is stored in the configured application DB
+  - current adapter: SQLite table `ai_provider_usage`
+  - usage key includes provider, model id, and month
+  - future adapter: PostgreSQL implementation behind the same `AiProviderUsageStore` port
 - provider output을 `SceneDefinition` 또는 scene intent로만 수용
 - `SceneDefinitionValidator` 통과 후 renderer 출력
 - invalid provider output에 대한 deterministic fallback
@@ -737,6 +743,7 @@ static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있�
 - 실제 Gemini 응답이 최소 하나의 response scene을 생성한다.
 - generated scene은 validation을 통과한 뒤에만 출력된다.
 - provider 장애, timeout, invalid JSON이 session을 깨뜨리지 않는다.
+- 월 호출 제한에 도달하면 실제 Google 호출 없이 deterministic fallback으로 돌아간다.
 - provider를 끄면 static director로 다시 동작한다.
 
 ### Current Implementation Notes
@@ -744,6 +751,8 @@ static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있�
 - `GeminiAiDirector` is available behind the existing `AiDirector` port when `spring-is-cool.ai.provider=gemini`.
 - `VertexGeminiTextClient` calls Vertex AI `generateContent` using the configured project, location, and model id.
 - `ServiceAccountAccessTokenProvider` mints a short-lived OAuth token from `GOOGLE_APPLICATION_CREDENTIALS`.
+- `PersistentAiProviderCallLimiter` gates real provider calls through the `AiProviderUsageStore` port.
+- `SQLiteAiProviderUsageStore` stores monthly usage in the same SQLite database as world events.
 - Provider text must parse as `SceneDefinition` JSON and pass existing validation before rendering.
 - Tests use a fake Gemini client; real `dev-demo`/`aws-demo` smoke tests require target env changes and GCP access.
 
@@ -765,7 +774,7 @@ MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴
 
 - `WorldProjection` read model 추가
   - source of truth는 `WorldEvent` log
-  - projection은 현재 전화, line, instruction, delegation, evidence 상태를 계산
+  - projection은 현재 전화, line, instruction, presence, delegation, evidence 상태를 계산
 - incoming call flow 의미 완성
   - `ANSWER` 후 caller instruction 수신
   - caller goodbye 후 `OFFLINE` event 기록
@@ -773,6 +782,11 @@ MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴
 - AI world summary에 semantic facts 제공
   - Gemini/static director는 projected facts를 참고
   - AI는 world state를 직접 변경하지 않음
+- SSH presence 표시
+  - 접속 중인 SSH users 수를 `LOOK`/`STATUS`에서 확인
+  - built-in agent `AI clerk`를 office presence로 표시
+  - SSH users와 `AI clerk`의 authority/capability를 `LOOK`/`STATUS`에서 확인
+  - `ASSIGN AI clerk check line`은 `ai-clerk` actor/event로 기록
 - MVP demo script 정리
   - `HELP`
   - `ANSWER`
@@ -799,6 +813,9 @@ MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴
 - `ANSWER`는 caller message를 남긴 뒤 line을 offline으로 만든다.
 - `LOOK`은 offline line과 남은 instruction을 보여준다.
 - `STATUS`는 projected telephone/line/instruction/evidence state를 보여준다.
+- 면접관이 함께 SSH 접속하면 `LOOK`/`STATUS`에서 users count가 증가한다.
+- `LOOK`/`STATUS`에서 `AI clerk` presence를 확인할 수 있다.
+- `LOOK`/`STATUS`에서 participants별 authority를 확인할 수 있다.
 - `LOG`는 `ANSWER`, `OFFLINE`, delegation, evidence events를 설명 가능한 순서로 보여준다.
 - `AI ...`는 projected semantic facts를 context로 받지만 world를 직접 변경하지 않는다.
 - SQLite restore 후에도 projection이 같은 world state를 계산한다.
@@ -807,9 +824,11 @@ MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴
 
 - `WorldProjection` is the MVP semantic read model.
 - `WorldEvent` remains the source of truth.
-- The current projection covers telephone state, line state, active instruction, latest delegation, latest evidence, and event count.
+- The current projection covers telephone state, line state, active instruction, SSH user presence, built-in agent presence, latest delegation, latest evidence, and event count.
 - `LOOK`, `STATUS`, static AI, and Gemini AI now consume projected facts.
 - The first incoming call now resolves into an `OFFLINE` event instead of leaving an ambiguous open line.
+- `AI clerk` is visible before delegation, and delegation records `ai-clerk` as the agent actor id.
+- Participant authority is visible in `LOOK` and `STATUS`; SSH users can inspect/answer/request/delegate/read logs, while `AI clerk` can check line state, describe office state, and attach line evidence.
 
 ### Deferred Follow-Up
 

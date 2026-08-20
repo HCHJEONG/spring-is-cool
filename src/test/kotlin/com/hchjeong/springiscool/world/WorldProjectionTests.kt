@@ -14,6 +14,10 @@ class WorldProjectionTests {
         assertEquals(null, projection.activeInstruction)
         assertTrue(projection.facts.contains("telephone=RINGING"))
         assertTrue(projection.facts.contains("line=UNANSWERED"))
+        assertTrue(projection.facts.contains("users=0"))
+        assertTrue(projection.facts.contains("agent=AI clerk:STANDBY"))
+        assertTrue(projection.facts.any { it.contains("user-authority=inspect office") })
+        assertTrue(projection.facts.any { it.contains("agent-authority=AI clerk:check line state") })
     }
 
     @Test
@@ -45,23 +49,23 @@ class WorldProjectionTests {
 
         session.record(
             action = WorldAction.AssignedTask,
-            observation = "The operator delegated `check line` to clerk.",
-            targetActorId = "clerk",
+            observation = "The operator delegated `check line` to AI clerk.",
+            targetActorId = "ai-clerk",
             authorityResult = AuthorityResult.ALLOWED,
         )
         session.record(
             action = WorldAction.EvidenceAttached,
             observation = "Evidence `carrier-tone-present` attached to the line check.",
-            actor = Actor("clerk"),
+            actor = Actor("ai-clerk"),
             evidenceId = "carrier-tone-present",
         )
 
         val projection = WorldProjection.from(session)
 
-        assertEquals("clerk", projection.lastDelegation?.actorId)
+        assertEquals("ai-clerk", projection.lastDelegation?.actorId)
         assertEquals(AuthorityResult.ALLOWED, projection.lastDelegation?.authority)
         assertEquals("carrier-tone-present", projection.lastEvidenceId)
-        assertTrue(projection.facts.any { it.contains("delegation=clerk") })
+        assertTrue(projection.facts.any { it.contains("delegation=ai-clerk") })
         assertTrue(projection.facts.contains("evidence=carrier-tone-present"))
     }
 }

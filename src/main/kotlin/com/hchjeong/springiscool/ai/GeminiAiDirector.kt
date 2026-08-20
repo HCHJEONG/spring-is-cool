@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component
 class GeminiAiDirector(
     private val properties: AiDirectorProperties,
     private val client: GeminiTextClient,
+    private val callLimiter: AiProviderCallLimiter,
     private val sceneDefinitionLoader: SceneDefinitionLoader,
 ) : AiDirector {
     private val objectMapper = jacksonObjectMapper()
@@ -24,7 +25,18 @@ class GeminiAiDirector(
 
     override fun direct(request: AiDirectorRequest): AiDirectorResult {
         if (!properties.enabled) {
-            return fallback("Gemini provider is configured but disabled.")
+            return fallback("${properties.provider} provider is configured but disabled.")
+        }
+
+        val limit = callLimiter.tryAcquire(
+            provider = properties.provider,
+            modelId = properties.modelId,
+        )
+        if (!limit.allowed) {
+            return fallback(
+                "${limit.provider} provider monthly call limit reached for ${limit.month}: " +
+                    "${limit.used}/${limit.limit}.",
+            )
         }
 
         return runCatching {
@@ -39,7 +51,7 @@ class GeminiAiDirector(
                 ),
             )
         }.getOrElse {
-            fallback("Gemini provider failed: ${it.message.orEmpty().ifBlank { it::class.simpleName.orEmpty() }}")
+            fallback("${properties.provider} provider failed: ${it.message.orEmpty().ifBlank { it::class.simpleName.orEmpty() }}")
         }
     }
 
@@ -100,7 +112,7 @@ class GeminiAiDirector(
             scene = Scene(
                 lines = listOf(
                     SceneLine(
-                        text = "Gemini signal collapsed. Static control retained.",
+                        text = "AI provider signal collapsed. Static control retained.",
                         reveal = RevealMode.TYPEWRITER,
                         style = SceneStyle.WARNING,
                         delayAfterMillis = 260,

@@ -66,22 +66,22 @@ class SQLiteWorldEventStoreTests {
         val session = WorldSession(sessionId = "test-office", eventStore = store)
         session.record(
             action = WorldAction.AssignedTask,
-            observation = "The operator delegated `check line` to clerk.",
-            targetActorId = "clerk",
+            observation = "The operator delegated `check line` to AI clerk.",
+            targetActorId = "ai-clerk",
             authorityResult = AuthorityResult.ALLOWED,
         )
         session.record(
             action = WorldAction.EvidenceAttached,
             observation = "Evidence attached.",
-            actor = Actor("clerk"),
+            actor = Actor("ai-clerk"),
             evidenceId = "carrier-tone-present",
         )
 
         val loaded = store.load("test-office")
 
-        assertEquals("clerk", loaded[1].targetActorId)
+        assertEquals("ai-clerk", loaded[1].targetActorId)
         assertEquals("ALLOWED", loaded[1].authorityResult)
-        assertEquals("clerk", loaded[2].actorId)
+        assertEquals("ai-clerk", loaded[2].actorId)
         assertEquals("carrier-tone-present", loaded[2].evidenceId)
     }
 }

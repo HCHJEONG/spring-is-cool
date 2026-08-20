@@ -42,6 +42,13 @@ class CommandParser {
         }
 
         val payload = input.drop(marker.length).trim()
+        val aiClerkMarker = "AI clerk "
+        if (payload.length > aiClerkMarker.length &&
+            payload.regionMatches(0, aiClerkMarker, 0, aiClerkMarker.length, ignoreCase = true)
+        ) {
+            return WorldCommand.Assign("ai-clerk", payload.drop(aiClerkMarker.length).trim())
+        }
+
         val parts = payload.split(Regex("\\s+"), limit = 2)
         val agentId = parts.getOrElse(0) { "" }
         val task = parts.getOrElse(1) { "" }
