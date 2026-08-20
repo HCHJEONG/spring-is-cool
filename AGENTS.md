@@ -130,9 +130,9 @@ question for the first milestone is:
 - Keep persistent runtime files outside containers unless there is a deliberate
   reason and it is documented.
 - Keep local development data outside this repository and outside Docker images.
-- On `aws-demo`, create dedicated root-level directories for service-owned
-  runtime files, databases, uploads, logs, and similar persistent data if they
-  become necessary.
+- On `aws-demo`, prefer the same home-based per-application layout used by the
+  other demo repositories, such as `/home/ubuntu/<app>` for runtime files and
+  `/home/ubuntu/docker_images/<app>` for image tarballs.
 - On `dev-demo`, use separate dedicated directories from `aws-demo`, even when
   the directory layout is intentionally similar.
 - Mount required runtime files or directories into containers at run time.

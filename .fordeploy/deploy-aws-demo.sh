@@ -8,8 +8,9 @@ set -euo pipefail
 : "${DEPLOY_BRANCH:=main}"
 : "${CLEAN_CLONE_ROOT:=${HOME}/hchjeong/deploy_remote_repo}"
 : "${AWS_DEMO_HOST:=aws-demo}"
-: "${REMOTE_IMAGE_DIR:=/srv/spring-is-cool/images}"
-: "${REMOTE_APP_DIR:=/srv/spring-is-cool}"
+: "${REMOTE_IMAGE_DIR:=/home/ubuntu/docker_images/spring-is-cool}"
+: "${REMOTE_APP_DIR:=/home/ubuntu/spring-is-cool}"
+: "${LEGACY_REMOTE_APP_DIR:=/srv/spring-is-cool}"
 : "${HOST_PORT:=2222}"
 : "${CONTAINER_PORT:=2222}"
 : "${DEMO_USER:=demo}"
@@ -59,11 +60,17 @@ log "preparing remote directories on $AWS_DEMO_HOST"
 ssh "$AWS_DEMO_HOST" \
   REMOTE_IMAGE_DIR="$REMOTE_IMAGE_DIR" \
   REMOTE_APP_DIR="$REMOTE_APP_DIR" \
+  LEGACY_REMOTE_APP_DIR="$LEGACY_REMOTE_APP_DIR" \
   bash -s <<'REMOTE_PREP'
 set -euo pipefail
-sudo mkdir -p "$REMOTE_IMAGE_DIR" "$REMOTE_APP_DIR/runtime/ssh"
-sudo chmod 700 "$REMOTE_APP_DIR/runtime/ssh"
-sudo chown -R "$(id -u):$(id -g)" "$REMOTE_IMAGE_DIR"
+mkdir -p "$REMOTE_IMAGE_DIR" "$REMOTE_APP_DIR/runtime/ssh"
+chmod 700 "$REMOTE_APP_DIR/runtime/ssh"
+
+if [ ! -f "$REMOTE_APP_DIR/runtime/ssh/hostkey.ser" ] && sudo test -f "$LEGACY_REMOTE_APP_DIR/runtime/ssh/hostkey.ser"; then
+  sudo cp "$LEGACY_REMOTE_APP_DIR/runtime/ssh/hostkey.ser" "$REMOTE_APP_DIR/runtime/ssh/hostkey.ser"
+  sudo chown "$(id -u):$(id -g)" "$REMOTE_APP_DIR/runtime/ssh/hostkey.ser"
+  chmod 600 "$REMOTE_APP_DIR/runtime/ssh/hostkey.ser"
+fi
 REMOTE_PREP
 
 log "transferring image archive to $AWS_DEMO_HOST:$REMOTE_IMAGE_FILE"

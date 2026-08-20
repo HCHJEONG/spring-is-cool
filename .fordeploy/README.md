@@ -63,6 +63,18 @@ ssh demo@192.168.0.104 -p 2222
 The AWS target uses the local `aws-demo` SSH alias by default. That alias reaches
 the private instance through `aws-bastion`.
 
+The AWS demo keeps repository-specific runtime files under the same home-based
+layout used by the other demo apps:
+
+```text
+/home/ubuntu/spring-is-cool
+/home/ubuntu/docker_images/spring-is-cool
+```
+
+Older deployments used `/srv/spring-is-cool`. The AWS deploy script preserves an
+existing SSH host key from that legacy path when creating the home-based runtime
+directory, but new deployments should use the home-based paths above.
+
 ```bash
 .fordeploy/deploy-aws-demo.sh
 ```
