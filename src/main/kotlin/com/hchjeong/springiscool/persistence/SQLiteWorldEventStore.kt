@@ -35,6 +35,11 @@ class SQLiteWorldEventStore(
         connect().use { connection ->
             connection.createStatement().use { statement ->
                 statement.executeUpdate(SCHEMA)
+                OPTIONAL_COLUMNS.forEach { column ->
+                    runCatching {
+                        statement.executeUpdate("alter table world_events add column ${column.definition}")
+                    }
+                }
             }
         }
     }
@@ -50,8 +55,11 @@ class SQLiteWorldEventStore(
                     actor_id,
                     action_verb,
                     action_text,
-                    observation_text
-                ) values (?, ?, ?, ?, ?, ?, ?)
+                    observation_text,
+                    target_actor_id,
+                    authority_result,
+                    evidence_id
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(session_id, sequence) do nothing
                 """.trimIndent(),
             ).use { statement ->
@@ -62,6 +70,9 @@ class SQLiteWorldEventStore(
                 statement.setString(5, event.action.verb)
                 statement.setString(6, event.action.detailText())
                 statement.setString(7, event.observation.text)
+                statement.setString(8, event.targetActorId)
+                statement.setString(9, event.authorityResult?.name)
+                statement.setString(10, event.evidenceId)
                 statement.executeUpdate()
             }
         }
@@ -71,7 +82,17 @@ class SQLiteWorldEventStore(
         connect().use { connection ->
             connection.prepareStatement(
                 """
-                select session_id, sequence, occurred_at, actor_id, action_verb, action_text, observation_text
+                select
+                    session_id,
+                    sequence,
+                    occurred_at,
+                    actor_id,
+                    action_verb,
+                    action_text,
+                    observation_text,
+                    target_actor_id,
+                    authority_result,
+                    evidence_id
                 from world_events
                 where session_id = ?
                 order by sequence asc
@@ -89,6 +110,9 @@ class SQLiteWorldEventStore(
                             actionVerb = rows.getString("action_verb"),
                             actionText = rows.getString("action_text"),
                             observationText = rows.getString("observation_text"),
+                            targetActorId = rows.getString("target_actor_id"),
+                            authorityResult = rows.getString("authority_result"),
+                            evidenceId = rows.getString("evidence_id"),
                         )
                     }
                     return events
@@ -118,8 +142,21 @@ class SQLiteWorldEventStore(
                 action_verb text not null,
                 action_text text,
                 observation_text text not null,
+                target_actor_id text,
+                authority_result text,
+                evidence_id text,
                 primary key (session_id, sequence)
             )
         """
+
+        private val OPTIONAL_COLUMNS = listOf(
+            OptionalColumn("target_actor_id text"),
+            OptionalColumn("authority_result text"),
+            OptionalColumn("evidence_id text"),
+        )
     }
 }
+
+private data class OptionalColumn(
+    val definition: String,
+)

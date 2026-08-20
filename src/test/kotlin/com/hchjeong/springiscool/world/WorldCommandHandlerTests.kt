@@ -80,6 +80,53 @@ class WorldCommandHandlerTests {
     }
 
     @Test
+    fun `assign delegates allowed task to fake agent and attaches evidence`() {
+        val session = WorldSession()
+
+        val result = handler.handle(session, "assign clerk check line")
+
+        assertIs<CommandResult.Continue>(result)
+        assertTrue(session.history().any {
+            it.action == WorldAction.AssignedTask &&
+                it.targetActorId == "clerk" &&
+                it.authorityResult == AuthorityResult.ALLOWED
+        })
+        assertTrue(session.history().any { it.actor.id == "clerk" && it.action == WorldAction.AgentReported })
+        assertTrue(session.history().any {
+            it.action == WorldAction.EvidenceAttached &&
+                it.evidenceId == "carrier-tone-present"
+        })
+        assertTrue(result.scene.lines.any { it.text.contains("EVIDENCE ATTACHED") })
+    }
+
+    @Test
+    fun `assign records denied authority result for unsupported delegation`() {
+        val session = WorldSession()
+
+        val result = handler.handle(session, "assign clerk open door")
+
+        assertIs<CommandResult.Continue>(result)
+        assertTrue(session.history().any {
+            it.action == WorldAction.AssignedTask &&
+                it.authorityResult == AuthorityResult.DENIED
+        })
+        assertTrue(result.scene.lines.any { it.text.contains("ASSIGNMENT DENIED") })
+    }
+
+    @Test
+    fun `log shows actor authority target and evidence metadata`() {
+        val session = WorldSession()
+
+        handler.handle(session, "assign clerk check line")
+        val log = handler.handle(session, "log")
+
+        assertIs<CommandResult.Continue>(log)
+        assertTrue(log.scene.lines.any { it.text.contains("operator:ASSIGN") && it.text.contains("target=clerk") })
+        assertTrue(log.scene.lines.any { it.text.contains("clerk:AGENT") && it.text.contains("authority=ALLOWED") })
+        assertTrue(log.scene.lines.any { it.text.contains("evidence=carrier-tone-present") })
+    }
+
+    @Test
     fun `quit returns non prompting quit scene`() {
         val result = handler.handle(WorldSession(), "quit")
 

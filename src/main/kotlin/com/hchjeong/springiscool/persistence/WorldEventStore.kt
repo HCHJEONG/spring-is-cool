@@ -18,6 +18,9 @@ data class StoredWorldEvent(
     val actionVerb: String,
     val actionText: String?,
     val observationText: String,
+    val targetActorId: String? = null,
+    val authorityResult: String? = null,
+    val evidenceId: String? = null,
 )
 
 @Component

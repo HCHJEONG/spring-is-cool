@@ -14,6 +14,7 @@ class CommandParserTests {
         assertEquals(WorldCommand.Log, parser.parse("remember"))
         assertEquals(WorldCommand.Status, parser.parse("stat"))
         assertEquals(WorldCommand.Ai("what is listening?"), parser.parse("ai what is listening?"))
+        assertEquals(WorldCommand.Assign("clerk", "check line"), parser.parse("assign clerk check line"))
     }
 
     @Test

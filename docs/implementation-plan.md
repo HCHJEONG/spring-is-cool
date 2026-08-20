@@ -689,7 +689,57 @@ Human, AI agent, service, device가 같은 world 안에서 action 주체가 될 
 - denied action은 UI 숨김이 아니라 world authority의 결과로 표현된다.
 - evidence가 later scene/history material로 사용된다.
 
-## 12. Milestone 12: Semantic World, Ledger, and External System Pilots
+### Current Implementation Notes
+
+- `ASSIGN clerk check line` is the first delegation command.
+- The prototype uses a deterministic fake agent named `clerk`; no autonomous agent runtime is introduced.
+- Allowed delegation records operator assignment, clerk report, and evidence attachment as world events.
+- Unsupported delegation records a denied authority result rather than silently hiding the action.
+- `WorldEvent` now carries small nullable metadata for `targetActorId`, `authorityResult`, and `evidenceId`.
+- SQLite persistence migrates the existing `world_events` table with nullable metadata columns, keeping PostgreSQL replacement feasible later.
+- `LOG` projects actor, authority, target, and evidence metadata as scene material.
+
+## 12. Milestone 12: Real Gemini Provider Integration
+
+### Goal
+
+static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있음을 검증한다.
+
+이 milestone의 질문은 다음이다.
+
+> 실제 LLM provider를 붙여도 scene trust boundary와 world authority가 유지되는가?
+
+### Scope
+
+- Gemini provider adapter 구현
+- `VERTEX_AI_MODEL_ID` 기반 model 선택
+  - 현재 의도 모델: Gemini 3.5 Flash Lite
+- 기존 `AiDirector` port 뒤에 real provider 연결
+- `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` runtime 설정 사용
+- provider timeout/retry/failure handling
+- provider output을 `SceneDefinition` 또는 scene intent로만 수용
+- `SceneDefinitionValidator` 통과 후 renderer 출력
+- invalid provider output에 대한 deterministic fallback
+- `aws-demo`와 `dev-demo` runtime env에서 실제 provider smoke test
+- provider cost/latency/quality review notes
+
+### Non-Goals
+
+- autonomous agents
+- provider가 world state를 직접 변경하는 구조
+- provider가 raw ANSI 또는 terminal control을 생성하는 구조
+- multi-provider routing
+- production-grade LLM observability
+
+### Success Criteria
+
+- `spring-is-cool.ai.provider=gemini` 같은 설정으로 real provider adapter를 선택할 수 있다.
+- 실제 Gemini 응답이 최소 하나의 response scene을 생성한다.
+- generated scene은 validation을 통과한 뒤에만 출력된다.
+- provider 장애, timeout, invalid JSON이 session을 깨뜨리지 않는다.
+- provider를 끄면 static director로 다시 동작한다.
+
+## 13. Milestone 13: Semantic World, Ledger, and External System Pilots
 
 ### Goal
 
@@ -732,7 +782,7 @@ Human, AI agent, service, device가 같은 world 안에서 action 주체가 될 
 - ledger는 UI 장식이 아니라 world value/resource state와 연결된다.
 - external technology는 adapter로 유지된다.
 
-## 13. Cross-Cutting Rules
+## 14. Cross-Cutting Rules
 
 ### Architecture
 
@@ -767,7 +817,7 @@ Human, AI agent, service, device가 같은 world 안에서 action 주체가 될 
 - SSH/manual visual test를 milestone acceptance에 포함한다.
 - AI-generated scene은 correctness뿐 아니라 readability, coherence, atmosphere, pacing, appropriateness를 검토한다.
 
-## 14. Order Summary
+## 15. Order Summary
 
 ```text
 1. SSH Cinematic Intro Prototype
@@ -781,7 +831,8 @@ Human, AI agent, service, device가 같은 world 안에서 action 주체가 될 
 9. Durable World Persistence
 10. Presentation Adapter Expansion
 11. Agent, Delegation, Governance, and Evidence Prototype
-12. Semantic World, Ledger, and External System Pilots
+12. Real Gemini Provider Integration
+13. Semantic World, Ledger, and External System Pilots
 ```
 
 이 순서는 고정된 연대기가 아니라 dependency와 risk의 우선순위다. 특히 3~5번에서 terminal experience가 약하다고 판단되면, persistence나 AI로 넘어가기 전에 renderer, writing, timing, layout을 먼저 다듬는다.

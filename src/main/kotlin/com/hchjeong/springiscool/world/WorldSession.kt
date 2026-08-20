@@ -37,13 +37,23 @@ class WorldSession(
         return events.toList()
     }
 
-    fun record(action: WorldAction, observation: String): WorldEvent {
+    fun record(
+        action: WorldAction,
+        observation: String,
+        actor: Actor = this.actor,
+        targetActorId: String? = null,
+        authorityResult: AuthorityResult? = null,
+        evidenceId: String? = null,
+    ): WorldEvent {
         val event = WorldEvent(
             sequence = events.size + 1,
             occurredAt = Instant.now(),
             actor = actor,
             action = action,
             observation = Observation(observation),
+            targetActorId = targetActorId,
+            authorityResult = authorityResult,
+            evidenceId = evidenceId,
         )
         events += event
         eventStore.append(sessionId, event)
@@ -67,6 +77,9 @@ class WorldSession(
             actor = Actor(actorId),
             action = WorldAction.fromStored(actionVerb, actionText),
             observation = Observation(observationText),
+            targetActorId = targetActorId,
+            authorityResult = authorityResult?.let { AuthorityResult.valueOf(it) },
+            evidenceId = evidenceId,
         )
     }
 }
@@ -85,7 +98,15 @@ data class WorldEvent(
     val actor: Actor,
     val action: WorldAction,
     val observation: Observation,
+    val targetActorId: String? = null,
+    val authorityResult: AuthorityResult? = null,
+    val evidenceId: String? = null,
 )
+
+enum class AuthorityResult {
+    ALLOWED,
+    DENIED,
+}
 
 sealed interface WorldAction {
     val verb: String
@@ -118,6 +139,18 @@ sealed interface WorldAction {
         override val verb = "AI"
     }
 
+    data object AssignedTask : WorldAction {
+        override val verb = "ASSIGN"
+    }
+
+    data object AgentReported : WorldAction {
+        override val verb = "AGENT"
+    }
+
+    data object EvidenceAttached : WorldAction {
+        override val verb = "EVIDENCE"
+    }
+
     data class UnknownCommand(val text: String) : WorldAction {
         override val verb = "UNKNOWN"
     }
@@ -132,6 +165,9 @@ sealed interface WorldAction {
                 "LOG" -> RequestedHistory
                 "STATUS" -> CheckedStatus
                 "AI" -> RequestedAiDirector
+                "ASSIGN" -> AssignedTask
+                "AGENT" -> AgentReported
+                "EVIDENCE" -> EvidenceAttached
                 "UNKNOWN" -> UnknownCommand(text.orEmpty())
                 else -> UnknownCommand(text ?: verb)
             }

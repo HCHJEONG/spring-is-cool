@@ -26,6 +26,7 @@ class WorldCommandHandler(
             WorldCommand.Help -> CommandResult.Continue(helpScene(session))
             WorldCommand.Quit -> CommandResult.Quit(goodbyeScene())
             is WorldCommand.Ai -> CommandResult.Continue(aiScene(session, command.text))
+            is WorldCommand.Assign -> CommandResult.Continue(assignScene(session, command.agentId, command.task))
             is WorldCommand.Unknown -> CommandResult.Continue(unknownScene(session, command.text))
         }
     }
@@ -119,6 +120,7 @@ class WorldCommandHandler(
                 line("  STATUS   read the current world state", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  LOG      replay recent events", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  AI ...   ask the director for a scene", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  ASSIGN clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  QUIT     close the line", SceneStyle.MUTED, RevealMode.INSTANT, 160),
                 blank(120),
@@ -181,6 +183,87 @@ class WorldCommandHandler(
         )
     }
 
+    private fun assignScene(session: WorldSession, agentId: String, task: String): Scene {
+        if (agentId.isBlank() || task.isBlank()) {
+            session.record(
+                action = WorldAction.AssignedTask,
+                observation = "The operator opened the assignment channel without a complete delegation.",
+                authorityResult = AuthorityResult.DENIED,
+            )
+
+            return Scene(
+                lines = listOf(
+                    line("ASSIGNMENT CHANNEL", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
+                    line("Name an agent and a task.", SceneStyle.MUTED, delayAfterMillis = 240),
+                    line("Example: ASSIGN clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 180),
+                ),
+            )
+        }
+
+        val normalizedAgent = agentId.lowercase()
+        val normalizedTask = task.lowercase()
+        val allowed = normalizedAgent == "clerk" && normalizedTask == "check line"
+
+        if (!allowed) {
+            val event = session.record(
+                action = WorldAction.AssignedTask,
+                observation = "The operator attempted to delegate `$task` to $normalizedAgent.",
+                targetActorId = normalizedAgent,
+                authorityResult = AuthorityResult.DENIED,
+            )
+
+            return Scene(
+                lines = listOf(
+                    line("ASSIGNMENT DENIED", SceneStyle.WARNING, RevealMode.INSTANT, 220),
+                    line("The office will not grant that authority.", delayAfterMillis = 340),
+                    line("$normalizedAgent cannot be assigned `$task` here.", SceneStyle.MUTED, delayAfterMillis = 260),
+                    blank(100),
+                    line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
+                ),
+            )
+        }
+
+        val assignment = session.record(
+            action = WorldAction.AssignedTask,
+            observation = "The operator delegated `check line` to clerk.",
+            targetActorId = normalizedAgent,
+            authorityResult = AuthorityResult.ALLOWED,
+        )
+        val agentReport = session.record(
+            action = WorldAction.AgentReported,
+            observation = "Clerk inspected the carrier signal and reported line noise.",
+            actor = Actor("clerk"),
+            authorityResult = AuthorityResult.ALLOWED,
+        )
+        val evidence = session.record(
+            action = WorldAction.EvidenceAttached,
+            observation = "Evidence `carrier-tone-present` attached to the line check.",
+            actor = Actor("clerk"),
+            evidenceId = "carrier-tone-present",
+        )
+
+        return Scene(
+            lines = listOf(
+                line("ASSIGNMENT ACCEPTED", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+                line("You delegate the line check to CLERK.", delayAfterMillis = 360),
+                blank(140),
+                line("CLERK:", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
+                line("\"I can inspect the signal, not open the door.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
+                line("\"Carrier tone is present. Line noise is rising.\"", SceneStyle.DIALOGUE, delayAfterMillis = 460),
+                blank(120),
+                line("EVIDENCE ATTACHED: carrier-tone-present", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+                line(
+                    "EVENTS ${assignment.sequence.toString().padStart(3, '0')}, " +
+                        "${agentReport.sequence.toString().padStart(3, '0')}, " +
+                        "${evidence.sequence.toString().padStart(3, '0')} RECORDED.",
+                    SceneStyle.SYSTEM,
+                    RevealMode.INSTANT,
+                    180,
+                ),
+            ),
+        )
+    }
+
     private fun logScene(session: WorldSession): Scene {
         val event = session.record(
             action = WorldAction.RequestedHistory,
@@ -189,7 +272,7 @@ class WorldCommandHandler(
 
         val historyLines = session.history().takeLast(MAX_LOG_EVENTS).map {
             line(
-                text = "${it.sequence.toString().padStart(3, '0')} ${it.action.verb} - ${it.observation.text}",
+                text = it.toLogText(),
                 style = SceneStyle.MUTED,
                 reveal = RevealMode.INSTANT,
                 delayAfterMillis = 90,
@@ -260,6 +343,17 @@ class WorldCommandHandler(
     companion object {
         private const val MAX_LOG_EVENTS = 8
     }
+}
+
+private fun WorldEvent.toLogText(): String {
+    val metadata = listOfNotNull(
+        targetActorId?.let { "target=$it" },
+        authorityResult?.let { "authority=${it.name}" },
+        evidenceId?.let { "evidence=$it" },
+    )
+
+    val suffix = if (metadata.isEmpty()) "" else " [${metadata.joinToString(" ")}]"
+    return "${sequence.toString().padStart(3, '0')} ${actor.id}:${action.verb} - ${observation.text}$suffix"
 }
 
 sealed interface CommandResult {

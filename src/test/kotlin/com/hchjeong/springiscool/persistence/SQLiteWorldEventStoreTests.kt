@@ -2,6 +2,8 @@ package com.hchjeong.springiscool.persistence
 
 import com.hchjeong.springiscool.world.WorldAction
 import com.hchjeong.springiscool.world.WorldSession
+import com.hchjeong.springiscool.world.Actor
+import com.hchjeong.springiscool.world.AuthorityResult
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,5 +51,35 @@ class SQLiteWorldEventStoreTests {
         assertTrue(restored.lineAnswered)
         assertFalse(restored.telephoneRinging)
         assertEquals(first.history().size, restored.history().size)
+    }
+
+    @Test
+    fun `stores and loads delegation metadata`() {
+        val database = Files.createTempFile("spring-is-cool-world-", ".sqlite")
+        val store = SQLiteWorldEventStore(
+            PersistenceProperties(sqlitePath = database.toString()),
+        )
+        store.initialize()
+
+        val session = WorldSession(sessionId = "test-office", eventStore = store)
+        session.record(
+            action = WorldAction.AssignedTask,
+            observation = "The operator delegated `check line` to clerk.",
+            targetActorId = "clerk",
+            authorityResult = AuthorityResult.ALLOWED,
+        )
+        session.record(
+            action = WorldAction.EvidenceAttached,
+            observation = "Evidence attached.",
+            actor = Actor("clerk"),
+            evidenceId = "carrier-tone-present",
+        )
+
+        val loaded = store.load("test-office")
+
+        assertEquals("clerk", loaded[1].targetActorId)
+        assertEquals("ALLOWED", loaded[1].authorityResult)
+        assertEquals("clerk", loaded[2].actorId)
+        assertEquals("carrier-tone-present", loaded[2].evidenceId)
     }
 }
