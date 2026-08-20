@@ -16,8 +16,8 @@ spring-is-cool:
     enabled: false
     provider: static
     project: ${GOOGLE_CLOUD_PROJECT:}
-    location: ${GOOGLE_CLOUD_LOCATION:}
-    model-id: ${VERTEX_AI_MODEL_ID:}
+    location: ${GOOGLE_CLOUD_LOCATION:global}
+    model-id: ${VERTEX_AI_MODEL_ID:gemini-2.5-flash-lite}
   persistence:
     enabled: true
     type: sqlite

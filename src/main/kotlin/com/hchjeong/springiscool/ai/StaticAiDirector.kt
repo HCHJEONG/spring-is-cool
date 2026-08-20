@@ -9,9 +9,16 @@ import com.hchjeong.springiscool.cinematic.renderer.TextArtLibrary
 import com.hchjeong.springiscool.cinematic.scene.SceneDefinition
 import com.hchjeong.springiscool.cinematic.scene.SceneDefinitionLoader
 import com.hchjeong.springiscool.cinematic.scene.SceneLineDefinition
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 
 @Component
+@ConditionalOnProperty(
+    prefix = "spring-is-cool.ai",
+    name = ["provider"],
+    havingValue = "static",
+    matchIfMissing = true,
+)
 class StaticAiDirector(
     private val sceneDefinitionLoader: SceneDefinitionLoader,
 ) : AiDirector {

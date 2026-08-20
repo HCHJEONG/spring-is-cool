@@ -128,6 +128,21 @@ application runtime directory:
 /home/ubuntu/spring-is-cool/runtime/ssh/hostkey.ser
 ```
 
+To smoke test the real Gemini provider on a target, set these values in that
+target's `.env.local` before deployment:
+
+```text
+SPRING_IS_COOL_AI_ENABLED=true
+SPRING_IS_COOL_AI_PROVIDER=gemini
+GOOGLE_CLOUD_PROJECT=<project-id>
+GOOGLE_CLOUD_LOCATION=global
+VERTEX_AI_MODEL_ID=gemini-2.5-flash-lite
+GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
+```
+
+The provider must still return SceneDefinition JSON; renderer validation remains
+the execution boundary.
+
 Initialize those files before the first deployment:
 
 ```bash

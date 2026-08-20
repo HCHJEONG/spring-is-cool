@@ -713,7 +713,7 @@ static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있�
 
 - Gemini provider adapter 구현
 - `VERTEX_AI_MODEL_ID` 기반 model 선택
-  - 현재 의도 모델: Gemini 3.5 Flash Lite
+  - 현재 smoke 대상 모델: `gemini-2.5-flash-lite`
 - 기존 `AiDirector` port 뒤에 real provider 연결
 - `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` runtime 설정 사용
 - provider timeout/retry/failure handling
@@ -738,6 +738,14 @@ static/fake AI Director를 실제 Gemini provider adapter로 교체할 수 있�
 - generated scene은 validation을 통과한 뒤에만 출력된다.
 - provider 장애, timeout, invalid JSON이 session을 깨뜨리지 않는다.
 - provider를 끄면 static director로 다시 동작한다.
+
+### Current Implementation Notes
+
+- `GeminiAiDirector` is available behind the existing `AiDirector` port when `spring-is-cool.ai.provider=gemini`.
+- `VertexGeminiTextClient` calls Vertex AI `generateContent` using the configured project, location, and model id.
+- `ServiceAccountAccessTokenProvider` mints a short-lived OAuth token from `GOOGLE_APPLICATION_CREDENTIALS`.
+- Provider text must parse as `SceneDefinition` JSON and pass existing validation before rendering.
+- Tests use a fake Gemini client; real `dev-demo`/`aws-demo` smoke tests require target env changes and GCP access.
 
 ## 13. Milestone 13: Semantic World, Ledger, and External System Pilots
 
