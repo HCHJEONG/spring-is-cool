@@ -1,3 +1,11 @@
 spring:
   application:
     name: spring-is-cool
+
+spring-is-cool:
+  ssh:
+    enabled: true
+    host: 127.0.0.1
+    port: 2222
+    demo-user: demo
+    demo-password: demo
