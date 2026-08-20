@@ -163,8 +163,7 @@ question for the first milestone is:
 
 - Read `docs/implementation-plan-original.md` for project principles and
   source context before making broad architectural changes.
-- Read `docs/implementation-plan-1st-milestone.md` before implementing the
-  initial Spring Boot prototype.
+- Read `docs/implementation-plan.md` before implementing milestone work.
 - Do not replace the first milestone with a generic CRUD API, web dashboard, or
   ordinary business backend skeleton.
 - Do not add automated deployment systems, CI/CD deployment flows, hosted build
@@ -201,5 +200,5 @@ question for the first milestone is:
 
 - `docs/implementation-plan-original.md` preserves the original project
   principles, including the appendix of early source notes.
-- `docs/implementation-plan-1st-milestone.md` defines the first executable
-  milestone: a minimal Spring Boot SSH cinematic intro prototype.
+- `docs/implementation-plan.md` defines the milestone roadmap and is the current
+  implementation plan source of truth.
