@@ -4,6 +4,7 @@ data class WorldProjection(
     val telephone: TelephoneProjection,
     val presence: PresenceSnapshot,
     val activeInstruction: String?,
+    val instructionCompleted: Boolean,
     val lastDelegation: DelegationProjection?,
     val lastEvidenceId: String?,
     val eventCount: Int,
@@ -17,7 +18,10 @@ data class WorldProjection(
         presence.agents.forEach {
             add("agent-authority=${it.displayName}:${it.authority.joinToString("|")}")
         }
-        activeInstruction?.let { add("instruction=$it") }
+        activeInstruction?.let {
+            add("instruction=$it")
+            add("instruction-status=${if (instructionCompleted) "COMPLETED" else "NOT_COMPLETED"}")
+        }
         lastDelegation?.let {
             add("delegation=${it.actorId}:${it.task}:${it.authority.name}")
         }
@@ -36,6 +40,12 @@ data class WorldProjection(
             val ringing = !answered && !offline
             val latestAssignment = events.lastOrNull { it.action == WorldAction.AssignedTask }
             val latestEvidence = events.lastOrNull { it.action == WorldAction.EvidenceAttached }
+            val instructionEvent = events.lastOrNull {
+                it.action == WorldAction.LineWentOffline || it.action == WorldAction.AnsweredTelephone
+            }
+            val instructionCompleted = instructionEvent?.let { instruction ->
+                events.any { it.action == WorldAction.Looked && it.sequence > instruction.sequence }
+            } ?: false
 
             return WorldProjection(
                 telephone = TelephoneProjection(
@@ -55,6 +65,7 @@ data class WorldProjection(
                 } else {
                     null
                 },
+                instructionCompleted = instructionCompleted,
                 lastDelegation = latestAssignment?.let {
                     DelegationProjection(
                         actorId = it.targetActorId ?: "unknown",

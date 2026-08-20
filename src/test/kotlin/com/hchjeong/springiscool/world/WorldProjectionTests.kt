@@ -12,6 +12,7 @@ class WorldProjectionTests {
         assertEquals(TelephoneState.RINGING, projection.telephone.state)
         assertEquals(LineState.UNANSWERED, projection.telephone.lineState)
         assertEquals(null, projection.activeInstruction)
+        assertEquals(false, projection.instructionCompleted)
         assertTrue(projection.facts.contains("telephone=RINGING"))
         assertTrue(projection.facts.contains("line=UNANSWERED"))
         assertTrue(projection.facts.contains("users=0"))
@@ -39,8 +40,43 @@ class WorldProjectionTests {
         assertEquals(TelephoneState.SILENT, projection.telephone.state)
         assertEquals(LineState.OFFLINE, projection.telephone.lineState)
         assertEquals("Look around the office. Type LOOK.", projection.activeInstruction)
+        assertEquals(false, projection.instructionCompleted)
         assertTrue(projection.facts.contains("line=OFFLINE"))
         assertTrue(projection.facts.any { it.startsWith("instruction=Look around") })
+        assertTrue(projection.facts.contains("instruction-status=NOT_COMPLETED"))
+    }
+
+    @Test
+    fun `projects instruction completed only after look follows the call instruction`() {
+        val session = WorldSession()
+
+        session.record(
+            action = WorldAction.Looked,
+            observation = "The operator inspected the office before answering.",
+        )
+        session.answerTelephone()
+        session.record(
+            action = WorldAction.AnsweredTelephone,
+            observation = "The operator answered the ringing telephone and received the caller's instruction.",
+        )
+        session.record(
+            action = WorldAction.LineWentOffline,
+            observation = "The caller said goodbye and the telephone line went offline.",
+        )
+
+        val notCompleted = WorldProjection.from(session)
+
+        assertEquals(false, notCompleted.instructionCompleted)
+
+        session.record(
+            action = WorldAction.Looked,
+            observation = "The operator inspected the office after the caller's instruction.",
+        )
+
+        val completed = WorldProjection.from(session)
+
+        assertEquals(true, completed.instructionCompleted)
+        assertTrue(completed.facts.contains("instruction-status=COMPLETED"))
     }
 
     @Test

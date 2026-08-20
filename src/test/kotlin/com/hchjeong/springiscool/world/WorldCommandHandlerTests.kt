@@ -29,6 +29,7 @@ class WorldCommandHandlerTests {
         assertIs<CommandResult.Continue>(look)
         assertTrue(look.scene.lines.any { it.text.contains("line is offline") })
         assertTrue(look.scene.lines.any { it.text.contains("instruction remains") })
+        assertTrue(look.scene.lines.any { it.text.contains("Instruction status: COMPLETED") })
     }
 
     @Test
@@ -59,6 +60,19 @@ class WorldCommandHandlerTests {
         assertIs<CommandResult.Continue>(status)
         assertTrue(status.scene.lines.any { it.text.contains("TELEPHONE   SILENT") })
         assertTrue(status.scene.lines.any { it.text.contains("LINE        OFFLINE") })
+        assertTrue(status.scene.lines.any { it.text.contains("INSTR STATE NOT COMPLETED") })
+    }
+
+    @Test
+    fun `status reports completed instruction after look follows answer`() {
+        val session = WorldSession()
+
+        handler.handle(session, "answer")
+        handler.handle(session, "look")
+        val status = handler.handle(session, "status")
+
+        assertIs<CommandResult.Continue>(status)
+        assertTrue(status.scene.lines.any { it.text.contains("INSTR STATE COMPLETED") })
     }
 
     @Test

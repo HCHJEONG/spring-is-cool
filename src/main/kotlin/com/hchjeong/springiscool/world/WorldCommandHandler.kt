@@ -63,7 +63,15 @@ class WorldCommandHandler(
         }
 
         val instructionLines = projection.activeInstruction?.let {
-            listOf(line("Instruction: $it", SceneStyle.SYSTEM, RevealMode.INSTANT, 220))
+            listOf(
+                line("Instruction: $it", SceneStyle.SYSTEM, RevealMode.INSTANT, 160),
+                line(
+                    "Instruction status: ${projection.instructionStatusText()}",
+                    SceneStyle.MUTED,
+                    RevealMode.INSTANT,
+                    220,
+                ),
+            )
         } ?: emptyList()
 
         val evidenceLines = projection.lastEvidenceId?.let {
@@ -360,6 +368,9 @@ class WorldCommandHandler(
         val instructionLine = projection.activeInstruction?.let {
             line("  INSTRUCTION $it", SceneStyle.MUTED, RevealMode.INSTANT, 120)
         }
+        val instructionStatusLine = projection.activeInstruction?.let {
+            line("  INSTR STATE ${projection.instructionStatusText()}", SceneStyle.MUTED, RevealMode.INSTANT, 120)
+        }
         val evidenceLine = projection.lastEvidenceId?.let {
             line("  EVIDENCE    $it", SceneStyle.MUTED, RevealMode.INSTANT, 120)
         }
@@ -401,6 +412,7 @@ class WorldCommandHandler(
                 userAuthorityLine,
                 *agentLines.toTypedArray(),
                 instructionLine,
+                instructionStatusLine,
                 evidenceLine,
                 line("  EVENTS      ${projection.eventCount}", SceneStyle.MUTED, RevealMode.INSTANT, 160),
                 blank(120),
@@ -476,6 +488,10 @@ class WorldCommandHandler(
     companion object {
         private const val MAX_LOG_EVENTS = 8
     }
+}
+
+private fun WorldProjection.instructionStatusText(): String {
+    return if (instructionCompleted) "COMPLETED" else "NOT COMPLETED"
 }
 
 private fun WorldEvent.toLogText(): String {
