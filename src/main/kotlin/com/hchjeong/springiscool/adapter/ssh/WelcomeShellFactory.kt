@@ -13,8 +13,8 @@ import java.nio.charset.StandardCharsets
 import com.hchjeong.springiscool.cinematic.renderer.CinematicTextRenderer
 import com.hchjeong.springiscool.cinematic.renderer.TerminalOutput
 import com.hchjeong.springiscool.persistence.WorldSessionFactory
-import com.hchjeong.springiscool.world.CommandResult
-import com.hchjeong.springiscool.world.WorldCommandHandler
+import com.hchjeong.springiscool.presentation.InteractionOutcome
+import com.hchjeong.springiscool.presentation.WorldInteractionService
 
 private fun writeLine(writer: PrintWriter, text: String = "") {
     writer.print("$text\r\n")
@@ -24,16 +24,16 @@ private fun writeLine(writer: PrintWriter, text: String = "") {
 @Component
 class WelcomeShellFactory(
     private val renderer: CinematicTextRenderer,
-    private val commandHandler: WorldCommandHandler,
+    private val worldInteractionService: WorldInteractionService,
     private val worldSessionFactory: WorldSessionFactory,
 ) : ShellFactory {
     override fun createShell(channel: ChannelSession): Command {
-        return WelcomeShellCommand(renderer, commandHandler, worldSessionFactory)
+        return WelcomeShellCommand(renderer, worldInteractionService, worldSessionFactory)
     }
 }
 private class WelcomeShellCommand(
     private val renderer: CinematicTextRenderer,
-    private val commandHandler: WorldCommandHandler,
+    private val worldInteractionService: WorldInteractionService,
     private val worldSessionFactory: WorldSessionFactory,
 ) : Command {
     private var input: InputStream? = null
@@ -106,14 +106,15 @@ private class WelcomeShellCommand(
 
                     writeLine(writer)
 
-                    when (val result = commandHandler.handle(worldSession, line)) {
-                        is CommandResult.Continue -> {
-                            renderer.render(shellOutput, result.scene)
+                    val result = worldInteractionService.submit(worldSession, line)
+                    renderer.render(shellOutput, result.rendererScene)
+
+                    when (result.outcome) {
+                        InteractionOutcome.CONTINUE -> {
                             promptPlaceholderVisible = true
                         }
 
-                        is CommandResult.Quit -> {
-                            renderer.render(shellOutput, result.scene)
+                        InteractionOutcome.QUIT -> {
                             exitCallback?.onExit(0)
                             return
                         }

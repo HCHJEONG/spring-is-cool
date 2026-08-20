@@ -15,6 +15,8 @@ set -euo pipefail
 : "${REMOTE_DATA_DIR:=${REMOTE_APP_DIR}/data}"
 : "${HOST_PORT:=2222}"
 : "${CONTAINER_PORT:=2222}"
+: "${HTTP_HOST_PORT:=8080}"
+: "${HTTP_CONTAINER_PORT:=8080}"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKING_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
@@ -85,6 +87,7 @@ SPRING_IS_COOL_PERSISTENCE_ENABLED=true
 SPRING_IS_COOL_PERSISTENCE_TYPE=sqlite
 SPRING_IS_COOL_PERSISTENCE_SQLITE_PATH=/app/data/world.sqlite
 SPRING_IS_COOL_PERSISTENCE_SESSION_ID=aws-demo-office
+SERVER_PORT=8080
 GOOGLE_CLOUD_PROJECT=
 GOOGLE_CLOUD_LOCATION=
 VERTEX_AI_MODEL_ID=
@@ -105,6 +108,7 @@ ensure_env_key SPRING_IS_COOL_PERSISTENCE_ENABLED true
 ensure_env_key SPRING_IS_COOL_PERSISTENCE_TYPE sqlite
 ensure_env_key SPRING_IS_COOL_PERSISTENCE_SQLITE_PATH /app/data/world.sqlite
 ensure_env_key SPRING_IS_COOL_PERSISTENCE_SESSION_ID aws-demo-office
+ensure_env_key SERVER_PORT 8080
 REMOTE_PREP
 
 log "transferring image archive to $AWS_DEMO_HOST:$REMOTE_IMAGE_FILE"
@@ -122,6 +126,8 @@ ssh "$AWS_DEMO_HOST" \
   CONTAINER_NAME="$CONTAINER_NAME" \
   HOST_PORT="$HOST_PORT" \
   CONTAINER_PORT="$CONTAINER_PORT" \
+  HTTP_HOST_PORT="$HTTP_HOST_PORT" \
+  HTTP_CONTAINER_PORT="$HTTP_CONTAINER_PORT" \
   bash -s <<'REMOTE_DEPLOY'
 set -euo pipefail
 
@@ -140,6 +146,7 @@ RUN_ARGS=(
   --restart unless-stopped
   --name "$CONTAINER_NAME"
   -p "0.0.0.0:${HOST_PORT}:${CONTAINER_PORT}"
+  -p "0.0.0.0:${HTTP_HOST_PORT}:${HTTP_CONTAINER_PORT}"
   --env-file "$REMOTE_ENV_FILE"
   -v "${REMOTE_APP_DIR}/runtime/ssh:/app/runtime/ssh"
   -v "${REMOTE_DATA_DIR}:/app/data"
@@ -181,3 +188,4 @@ REMOTE_DEPLOY
 
 log "deploy success"
 log "connect through bastion: ssh -J aws-bastion demo@172.31.76.194 -p ${HOST_PORT}"
+log "HTTP command endpoint through tunnel or private network: http://172.31.76.194:${HTTP_HOST_PORT}/world/commands"

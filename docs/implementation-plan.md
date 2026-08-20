@@ -647,6 +647,13 @@ SSH가 첫 presentation일 뿐 core architecture가 SSH에 고정되지 않았�
 - core world behavior는 presentation adapter를 모른다.
 - scene/render output은 adapter가 선택한 표현으로 변환 가능하다.
 
+### Current Implementation Notes
+
+- Added a small presentation boundary instead of a full UI or HTTP surface.
+- `ScenePresenter` projects renderer `Scene` objects into adapter-neutral `PresentedScene` DTOs.
+- `WorldInteractionService` returns both the renderer scene for SSH and the projected scene for future HTTP/TUI adapters.
+- SSH now submits commands through the same interaction service, keeping the next adapter path open without changing world behavior.
+
 ## 11. Milestone 11: Agent, Delegation, Governance, and Evidence Prototype
 
 ### Goal

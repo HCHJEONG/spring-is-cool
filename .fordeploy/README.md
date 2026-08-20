@@ -31,6 +31,19 @@ SPRING_IS_COOL_SSH_HOST=0.0.0.0
 SPRING_IS_COOL_SSH_PORT=2222
 ```
 
+The HTTP command adapter uses `SERVER_PORT=8080` and exposes:
+
+```text
+POST /world/commands
+```
+
+By default the deploy scripts publish both:
+
+```text
+0.0.0.0:${HOST_PORT}:2222
+0.0.0.0:${HTTP_HOST_PORT}:8080
+```
+
 ## Dev Demo
 
 Default target:
@@ -81,6 +94,17 @@ After deployment:
 ssh demo@192.168.0.104 -p 2222
 ```
 
+For the JSON command adapter:
+
+```bash
+curl -X POST http://192.168.0.104:8080/world/commands \
+  -H 'Content-Type: application/json' \
+  -d '{"command":"look"}'
+```
+
+If this does not respond from another LAN machine, check the dev-demo host
+firewall for TCP `8080`.
+
 ## AWS Demo
 
 The AWS target uses the local `aws-demo` SSH alias by default. That alias reaches
@@ -122,12 +146,34 @@ from the desired client CIDR. Keep that infrastructure change explicit and
 outside the deploy script. In this environment, make that change manually from
 the AWS bastion host using the AWS CLI available there.
 
+The AWS app/container configuration is ready for HTTP JSON access, but actual
+external access still needs one of these explicit choices:
+
+- Open `8080` only to the intended client CIDR in the AWS Security Group.
+- Keep the private instance closed and use a bastion tunnel.
+
 Current `aws-demo` is a private instance without a public IP. Security Group
 rules alone cannot make it directly reachable from the internet. After
 deployment, connect through the bastion:
 
 ```bash
 ssh -J aws-bastion demo@172.31.76.194 -p 2222
+```
+
+Recommended AWS curl path: use a local tunnel through the bastion.
+
+Open the tunnel in one terminal:
+
+```bash
+ssh -N -L 18080:172.31.76.194:8080 aws-bastion
+```
+
+Then call the JSON command adapter from another terminal:
+
+```bash
+curl -X POST http://127.0.0.1:18080/world/commands \
+  -H 'Content-Type: application/json' \
+  -d '{"command":"look"}'
 ```
 
 If `aws-demo` later needs direct public access, use an explicit AWS entrypoint

@@ -18,6 +18,12 @@ import java.time.Instant
     havingValue = "true",
     matchIfMissing = true,
 )
+@ConditionalOnProperty(
+    prefix = "spring-is-cool.persistence",
+    name = ["type"],
+    havingValue = "sqlite",
+    matchIfMissing = true,
+)
 class SQLiteWorldEventStore(
     private val properties: PersistenceProperties,
 ) : WorldEventStore {
