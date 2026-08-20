@@ -1,6 +1,9 @@
 spring:
   application:
     name: spring-is-cool
+  main:
+    web-application-type: none
+    keep-alive: true
 
 spring-is-cool:
   ssh:
@@ -9,3 +12,4 @@ spring-is-cool:
     port: 2222
     demo-user: demo
     demo-password: demo
+
