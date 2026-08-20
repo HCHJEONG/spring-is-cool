@@ -99,9 +99,9 @@ question for the first milestone is:
 - Do not build Docker images from this repository working tree.
 - For Docker builds, clone the repository into a separate build location and
   build from that clean clone.
-- The local build clone root is `J:\deploy_remote_repo`.
+- The local build clone root is `~/hchjeong/deploy_remote_repo`.
 - Shell scripts running from WSL should refer to that build clone root as
-  `/mnt/j/deploy_remote_repo`.
+  `~/hchjeong/deploy_remote_repo`.
 - A separate local clone may also be used for source preparation, local Docker
   image builds, migrations, or seed commands.
 - Do not use a persistent local Spring Boot process as the normal deployment

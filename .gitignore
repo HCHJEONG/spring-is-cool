@@ -10,3 +10,5 @@ Thumbs.db
 .env
 .env.*
 *.log
+*.tar
+*.tar.gz

@@ -9,4 +9,5 @@ data class SshServerProperties(
     val port: Int = 2222,
     val demoUser: String = "demo",
     val demoPassword: String = "demo",
+    val hostKeyPath: String = "build/ssh/hostkey.ser",
 )

@@ -12,4 +12,4 @@ spring-is-cool:
     port: 2222
     demo-user: demo
     demo-password: demo
-
+    host-key-path: build/ssh/hostkey.ser

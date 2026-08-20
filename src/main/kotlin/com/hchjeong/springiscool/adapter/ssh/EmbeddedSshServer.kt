@@ -26,7 +26,7 @@ class EmbeddedSshServer(
             return
         }
 
-        val hostKeyPath = Path.of("build", "ssh", "hostkey.ser")
+        val hostKeyPath = Path.of(properties.hostKeyPath)
         Files.createDirectories(hostKeyPath.parent)
 
         val server = SshServer.setUpDefaultServer()

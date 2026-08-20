@@ -1,0 +1,14 @@
+.git
+.gradle
+.idea
+.kotlin
+build
+out
+.fordeploy/*.tar
+.fordeploy/*.log
+.env
+.env.*
+*.iml
+*.log
+Thumbs.db
+.DS_Store
