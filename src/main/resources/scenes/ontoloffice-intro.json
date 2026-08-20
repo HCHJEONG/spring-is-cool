@@ -1,0 +1,119 @@
+{
+  "id": "ontoloffice-intro",
+  "clearBefore": true,
+  "hideCursorDuringPlayback": true,
+  "showPromptAfter": true,
+  "terminalWidth": 80,
+  "lines": [
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 250
+    },
+    {
+      "text": "ONTOLOFFICE",
+      "reveal": "INSTANT",
+      "style": "SYSTEM",
+      "alignment": "CENTER",
+      "delayAfterMillis": 500
+    },
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 300
+    },
+    {
+      "text": "The office is empty.",
+      "reveal": "TYPEWRITER",
+      "style": "NARRATION",
+      "delayAfterMillis": 900,
+      "characterDelayMillis": 45
+    },
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 250
+    },
+    {
+      "art": "telephone",
+      "reveal": "INSTANT",
+      "style": "SIGNAL",
+      "alignment": "CENTER",
+      "delayAfterMillis": 850
+    },
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 250
+    },
+    {
+      "text": "RING...",
+      "reveal": "INSTANT",
+      "style": "SIGNAL",
+      "alignment": "CENTER",
+      "delayAfterMillis": 1050
+    },
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 350
+    },
+    {
+      "art": "telephone",
+      "reveal": "INSTANT",
+      "style": "SIGNAL",
+      "alignment": "CENTER",
+      "delayAfterMillis": 700
+    },
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 200
+    },
+    {
+      "text": "RING... RING...",
+      "reveal": "INSTANT",
+      "style": "SIGNAL",
+      "alignment": "CENTER",
+      "delayAfterMillis": 1200
+    },
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 350
+    },
+    {
+      "text": "Someone is calling.",
+      "reveal": "TYPEWRITER",
+      "style": "NARRATION",
+      "delayAfterMillis": 900,
+      "characterDelayMillis": 70
+    },
+    {
+      "text": "",
+      "reveal": "INSTANT",
+      "style": "NARRATION",
+      "delayAfterMillis": 450
+    },
+    {
+      "text": "LINE OPEN.",
+      "reveal": "TYPEWRITER",
+      "style": "SYSTEM",
+      "delayAfterMillis": 650,
+      "characterDelayMillis": 30
+    },
+    {
+      "text": "HELP AVAILABLE.",
+      "reveal": "INSTANT",
+      "style": "MUTED",
+      "delayAfterMillis": 450
+    }
+  ]
+}

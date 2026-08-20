@@ -108,12 +108,15 @@ class WorldCommandHandler(
         return Scene(
             lines = listOf(
                 line("COMMAND CHANNEL", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
-                line("  LOOK     inspect the room", SceneStyle.MUTED, RevealMode.INSTANT, 120),
-                line("  ANSWER   pick up the telephone", SceneStyle.MUTED, RevealMode.INSTANT, 120),
-                line("  STATUS   read the current world state", SceneStyle.MUTED, RevealMode.INSTANT, 120),
-                line("  LOG      replay recent events", SceneStyle.MUTED, RevealMode.INSTANT, 120),
-                line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 120),
-                line("  QUIT     close the line", SceneStyle.MUTED, RevealMode.INSTANT, 220),
+                line("These words are wired:", SceneStyle.MUTED, RevealMode.INSTANT, 180),
+                line("  LOOK     inspect the room", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  ANSWER   pick up the telephone", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  STATUS   read the current world state", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  LOG      replay recent events", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  QUIT     close the line", SceneStyle.MUTED, RevealMode.INSTANT, 160),
+                blank(120),
+                line("Other words may still reach the line.", SceneStyle.NARRATION, delayAfterMillis = 260),
             ),
         )
     }
