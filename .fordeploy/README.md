@@ -94,6 +94,24 @@ After deployment:
 ssh demo@192.168.0.104 -p 2222
 ```
 
+Office external demo access can be exposed through the office router without
+sharing any OS SSH key:
+
+```bash
+ssh demo@1.215.116.218 -p 2222
+```
+
+The office router forwards:
+
+```text
+public TCP 2222 -> 192.168.0.104:2222
+```
+
+This must point to the Spring Boot embedded SSH server, not the host operating
+system SSH daemon. Do not use the existing OS SSH forwarding rule for interview
+demo access. Disable this router rule after the demo window if public access is
+not needed.
+
 For the JSON command adapter:
 
 ```bash

@@ -200,6 +200,14 @@ Dev demo:
 ssh demo@192.168.0.104 -p 2222
 ```
 
+Office external demo:
+
+```bash
+ssh demo@1.215.116.218 -p 2222
+```
+
+이 경로는 사무실 공유기 port forwarding을 통해 public TCP `2222`를 `yoga`의 Ontoloffice embedded SSH port로 전달합니다. 면접관에게 OS SSH key를 제공하지 않고, Spring Boot 앱 내부의 `demo` 계정으로만 terminal world에 접속시키기 위한 경로입니다.
+
 AWS demo:
 
 ```bash
@@ -253,4 +261,3 @@ curl -X POST http://127.0.0.1:18080/world/commands \
 - [docs/implementation-plan.md](docs/implementation-plan.md): 현재 구현 계획의 source of truth
 - [docs/implementation-plan-original.md](docs/implementation-plan-original.md): 초기 원칙과 방향성 보존 문서
 - [.fordeploy/README.md](.fordeploy/README.md): 수동 배포 runbook
-
