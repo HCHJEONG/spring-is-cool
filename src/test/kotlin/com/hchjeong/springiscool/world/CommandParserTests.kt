@@ -11,6 +11,8 @@ class CommandParserTests {
         assertEquals(WorldCommand.Look, parser.parse("l"))
         assertEquals(WorldCommand.Help, parser.parse("?"))
         assertEquals(WorldCommand.Quit, parser.parse("exit"))
+        assertEquals(WorldCommand.Log, parser.parse("remember"))
+        assertEquals(WorldCommand.Status, parser.parse("stat"))
     }
 
     @Test

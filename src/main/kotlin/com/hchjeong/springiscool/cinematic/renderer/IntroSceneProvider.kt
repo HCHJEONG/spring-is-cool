@@ -11,6 +11,14 @@ class IntroSceneProvider {
             lines = listOf(
                 blank(250),
                 SceneLine(
+                    text = "ONTOLOFFICE",
+                    reveal = RevealMode.INSTANT,
+                    style = SceneStyle.SYSTEM,
+                    delayAfterMillis = 500,
+                    alignment = SceneAlignment.CENTER,
+                ),
+                blank(300),
+                SceneLine(
                     text = "The office is empty.",
                     reveal = RevealMode.TYPEWRITER,
                     style = SceneStyle.NARRATION,

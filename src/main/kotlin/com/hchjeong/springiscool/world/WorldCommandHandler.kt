@@ -17,9 +17,11 @@ class WorldCommandHandler(
             WorldCommand.Empty -> CommandResult.Continue(emptyScene())
             WorldCommand.Look -> CommandResult.Continue(lookScene(session))
             WorldCommand.Answer -> CommandResult.Continue(answerScene(session))
-            WorldCommand.Help -> CommandResult.Continue(helpScene())
+            WorldCommand.Log -> CommandResult.Continue(logScene(session))
+            WorldCommand.Status -> CommandResult.Continue(statusScene(session))
+            WorldCommand.Help -> CommandResult.Continue(helpScene(session))
             WorldCommand.Quit -> CommandResult.Quit(goodbyeScene())
-            is WorldCommand.Unknown -> CommandResult.Continue(unknownScene(command.text))
+            is WorldCommand.Unknown -> CommandResult.Continue(unknownScene(session, command.text))
         }
     }
 
@@ -32,6 +34,11 @@ class WorldCommandHandler(
     }
 
     private fun lookScene(session: WorldSession): Scene {
+        session.record(
+            action = WorldAction.Looked,
+            observation = "The operator inspected the office.",
+        )
+
         val telephoneLine = if (session.telephoneRinging) {
             "The telephone is still ringing."
         } else {
@@ -58,6 +65,11 @@ class WorldCommandHandler(
 
     private fun answerScene(session: WorldSession): Scene {
         if (!session.answerTelephone()) {
+            session.record(
+                action = WorldAction.AnsweredTelephone,
+                observation = "The operator listened again to an already open line.",
+            )
+
             return Scene(
                 lines = listOf(
                     line("The receiver is already warm in your hand.", delayAfterMillis = 360),
@@ -67,6 +79,11 @@ class WorldCommandHandler(
                 ),
             )
         }
+
+        session.record(
+            action = WorldAction.AnsweredTelephone,
+            observation = "The operator answered the ringing telephone.",
+        )
 
         return Scene(
             lines = listOf(
@@ -82,23 +99,81 @@ class WorldCommandHandler(
         )
     }
 
-    private fun helpScene(): Scene {
+    private fun helpScene(session: WorldSession): Scene {
+        session.record(
+            action = WorldAction.RequestedHelp,
+            observation = "The operator requested the command channel.",
+        )
+
         return Scene(
             lines = listOf(
                 line("COMMAND CHANNEL", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
                 line("  LOOK     inspect the room", SceneStyle.MUTED, RevealMode.INSTANT, 120),
                 line("  ANSWER   pick up the telephone", SceneStyle.MUTED, RevealMode.INSTANT, 120),
+                line("  STATUS   read the current world state", SceneStyle.MUTED, RevealMode.INSTANT, 120),
+                line("  LOG      replay recent events", SceneStyle.MUTED, RevealMode.INSTANT, 120),
                 line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 120),
                 line("  QUIT     close the line", SceneStyle.MUTED, RevealMode.INSTANT, 220),
             ),
         )
     }
 
-    private fun unknownScene(input: String): Scene {
+    private fun unknownScene(session: WorldSession, input: String): Scene {
+        val event = session.record(
+            action = WorldAction.UnknownCommand(input),
+            observation = "The operator tried an unrecognized command: $input.",
+        )
+
         return Scene(
             lines = listOf(
                 line("The system does not recognize `$input`.", SceneStyle.WARNING, delayAfterMillis = 360),
                 line("Type HELP if the room feels too quiet.", SceneStyle.MUTED, delayAfterMillis = 240),
+                line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
+            ),
+        )
+    }
+
+    private fun logScene(session: WorldSession): Scene {
+        val event = session.record(
+            action = WorldAction.RequestedHistory,
+            observation = "The operator requested the local event log.",
+        )
+
+        val historyLines = session.history().takeLast(MAX_LOG_EVENTS).map {
+            line(
+                text = "${it.sequence.toString().padStart(3, '0')} ${it.action.verb} - ${it.observation.text}",
+                style = SceneStyle.MUTED,
+                reveal = RevealMode.INSTANT,
+                delayAfterMillis = 90,
+            )
+        }
+
+        return Scene(
+            lines = listOf(
+                line("LOCAL EVENT LOG", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+                line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 160),
+                blank(120),
+            ) + historyLines,
+        )
+    }
+
+    private fun statusScene(session: WorldSession): Scene {
+        val event = session.record(
+            action = WorldAction.CheckedStatus,
+            observation = "The operator checked the current world state.",
+        )
+
+        val phoneState = if (session.telephoneRinging) "RINGING" else "SILENT"
+        val lineState = if (session.lineAnswered) "OPEN" else "UNANSWERED"
+
+        return Scene(
+            lines = listOf(
+                line("ONTOLOFFICE STATUS", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+                line("  TELEPHONE   $phoneState", SceneStyle.MUTED, RevealMode.INSTANT, 120),
+                line("  LINE        $lineState", SceneStyle.MUTED, RevealMode.INSTANT, 120),
+                line("  EVENTS      ${session.history().size}", SceneStyle.MUTED, RevealMode.INSTANT, 160),
+                blank(120),
+                line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
             ),
         )
     }
@@ -132,6 +207,10 @@ class WorldCommandHandler(
             characterDelayMillis = characterDelayMillis,
             alignment = alignment,
         )
+    }
+
+    companion object {
+        private const val MAX_LOG_EVENTS = 8
     }
 }
 

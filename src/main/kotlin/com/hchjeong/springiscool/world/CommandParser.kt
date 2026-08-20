@@ -13,6 +13,8 @@ class CommandParser {
         return when (normalized.uppercase()) {
             "LOOK", "L" -> WorldCommand.Look
             "ANSWER", "A" -> WorldCommand.Answer
+            "LOG", "REMEMBER", "HISTORY" -> WorldCommand.Log
+            "STATUS", "STAT" -> WorldCommand.Status
             "HELP", "?" -> WorldCommand.Help
             "QUIT", "EXIT" -> WorldCommand.Quit
             else -> WorldCommand.Unknown(normalized)
@@ -24,6 +26,8 @@ sealed interface WorldCommand {
     data object Empty : WorldCommand
     data object Look : WorldCommand
     data object Answer : WorldCommand
+    data object Log : WorldCommand
+    data object Status : WorldCommand
     data object Help : WorldCommand
     data object Quit : WorldCommand
     data class Unknown(val text: String) : WorldCommand
