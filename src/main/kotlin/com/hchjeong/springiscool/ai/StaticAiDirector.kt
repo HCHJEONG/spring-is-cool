@@ -33,7 +33,7 @@ class StaticAiDirector(
             )
         }.getOrElse {
             AiDirectorResult.Fallback(
-                scene = fallbackScene("static director output failed validation"),
+                scene = fallbackScene("static AI clerk output failed validation"),
                 reason = it.message.orEmpty(),
             )
         }
@@ -55,7 +55,7 @@ class StaticAiDirector(
             terminalWidth = 80,
             lines = listOf(
                 SceneLineDefinition(
-                    text = "AI DIRECTOR",
+                    text = "AI CLERK",
                     style = "SYSTEM",
                     reveal = "INSTANT",
                     delayAfterMillis = 180,
@@ -93,7 +93,7 @@ class StaticAiDirector(
 
     private fun reviewNotes(request: AiDirectorRequest): List<String> {
         return listOf(
-            "Used deterministic static director while provider is not enabled.",
+            "Used deterministic static AI clerk response while provider is not enabled.",
             "Referenced ${TextArtLibrary.assetNames().intersect(request.availableTextArt.toSet()).sorted()} from the text-art library.",
             "Output was validated as SceneDefinition before rendering.",
         )

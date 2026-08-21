@@ -558,9 +558,9 @@ AI가 raw terminal을 제어하지 않고, world state와 asset library를 바�
 
 ### Current Implementation Notes
 
-- `AI ...` command opens the first AI Director channel from the SSH world loop.
-- The default director is deterministic/static, so local tests and demo deploys do not require a live provider.
-- AI Director output is expressed as `SceneDefinition` and must pass `SceneDefinitionValidator` before rendering.
+- AI is presented to users as `AI clerk`; provider-backed responses stay behind the internal `AiDirector` port.
+- The default AI clerk response is deterministic/static, so local tests and demo deploys do not require a live provider.
+- AI clerk provider output is expressed as `SceneDefinition` and must pass `SceneDefinitionValidator` before rendering.
 - Provider/runtime settings are prepared through `.env.local`, including `SPRING_IS_COOL_AI_*`, `GOOGLE_CLOUD_*`, `VERTEX_AI_MODEL_ID`, and `GOOGLE_APPLICATION_CREDENTIALS`.
 - `aws-demo` and `dev-demo` mount `gcp-key.json` outside the Docker image and pass runtime settings through `--env-file`.
 
@@ -792,8 +792,8 @@ MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴
   - `ANSWER`
   - `LOOK`
   - `STATUS`
-  - `AI ...`
   - `ASSIGN clerk check line`
+  - `ASSIGN clerk describe office`
   - `LOG`
 - implementation plan에 future semantic/ledger/external adapter 방향을 후속 단계로 분리
 
@@ -817,7 +817,7 @@ MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴
 - `LOOK`/`STATUS`에서 `AI clerk` presence를 확인할 수 있다.
 - `LOOK`/`STATUS`에서 participants별 authority를 확인할 수 있다.
 - `LOG`는 `ANSWER`, `OFFLINE`, delegation, evidence events를 설명 가능한 순서로 보여준다.
-- `AI ...`는 projected semantic facts를 context로 받지만 world를 직접 변경하지 않는다.
+- AI clerk responses receive projected semantic facts as context but do not directly mutate the world.
 - SQLite restore 후에도 projection이 같은 world state를 계산한다.
 
 ### Current Implementation Notes

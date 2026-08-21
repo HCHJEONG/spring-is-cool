@@ -21,7 +21,7 @@ class StaticAiDirectorTests {
         )
 
         assertIs<AiDirectorResult.Generated>(result)
-        assertTrue(result.scene.lines.any { it.text.contains("AI DIRECTOR") })
+        assertTrue(result.scene.lines.any { it.text.contains("AI CLERK") })
         assertTrue(result.reviewNotes.any { it.contains("validated") })
     }
 }

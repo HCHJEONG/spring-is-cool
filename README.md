@@ -10,7 +10,7 @@
 │  [ WORLD COMMANDS ] -> [ EVENT LOG / SQLITE ]              │
 │          │                    │                            │
 │          v                    v                            │
-│  [ AI DIRECTOR ]  ->  [ VALIDATED SCENE DEFINITION ]       │
+│  [ AI CLERK ]     ->  [ VALIDATED SCENE DEFINITION ]       │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -43,12 +43,12 @@
 - Spring Boot 4 + Kotlin + Java 21 기반 애플리케이션
 - Apache MINA SSHD 기반 embedded SSH server
 - SSH 접속 시 cinematic intro scene 재생
-- `LOOK`, `STATUS`, `ANSWER`, `HELP`, `LOG`, `AI ...`, `ASSIGN AI clerk check line`, `QUIT` 명령
+- `LOOK`, `STATUS`, `ANSWER`, `HELP`, `LOG`, `ASSIGN AI clerk ...`, `QUIT` 명령
 - HTTP JSON command adapter
 - SQLite 기반 event persistence
 - PostgreSQL 교체를 염두에 둔 persistence adapter 경계
 - Gemini Vertex AI adapter
-- provider-neutral AI director 추상화
+- AI clerk responses backed by a provider-neutral internal `AiDirector` port
 - provider-neutral monthly call limiter
 - AI clerk presence / authority projection
 - SSH 접속자 presence tracking
@@ -64,8 +64,8 @@
 4. `STATUS`로 사용자, AI clerk, 권한, 전화 상태, 이벤트 수를 확인한다.
 5. `ANSWER`로 걸려온 전화를 받고, line이 offline으로 바뀌는 것을 보여준다.
 6. `ASSIGN AI clerk check line`으로 AI clerk에게 제한된 작업을 위임한다.
-7. `AI describe the office in one strange sentence`처럼 자연어 장면 생성을 요청한다.
-8. `LOG`로 event sourcing에 가까운 기록 흐름을 확인한다.
+7. `ASSIGN AI clerk describe office`처럼 AI clerk에게 상태 설명을 위임한다.
+8. `LOG` 또는 `LOG for 100`으로 event sourcing에 가까운 기록 흐름을 확인한다.
 9. 다른 SSH 세션을 하나 더 열고 `STATUS`에서 active user count가 증가하는 것을 보여준다.
 10. `QUIT`으로 terminal world를 떠나는 장면을 확인한다.
 
@@ -76,8 +76,7 @@ HELP
 LOOK
 STATUS
 ANSWER
-ASSIGN AI clerk check line
-AI describe the office
+ASSIGN
 LOG
 QUIT
 ```
@@ -106,12 +105,13 @@ HTTP adapter
 - `cinematic/scene`: AI 또는 static source가 반환할 수 있는 scene definition
 - `world`: command parsing, world state, projection, actor authority
 - `persistence`: event storage adapter
-- `ai`: provider-neutral AI director와 Gemini adapter
+- `ai`: AI clerk responses through an internal `AiDirector`/Gemini adapter
 - `presentation`: HTTP JSON presentation adapter
 
 ## AI 설계
 
 AI는 현재 Gemini Vertex AI를 사용할 수 있지만, core world는 Gemini에 묶이지 않도록 구성했습니다.
+사용자-facing 표면에서는 AI를 모두 `AI clerk`로 표현합니다. `AiDirector`는 사람이 아니라 AI clerk response provider를 감싸는 내부 port 이름입니다.
 
 ```text
 AiDirector

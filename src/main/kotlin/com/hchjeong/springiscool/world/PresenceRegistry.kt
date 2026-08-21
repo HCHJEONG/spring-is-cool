@@ -30,7 +30,7 @@ data class PresenceSnapshot(
         authority = listOf(
             "inspect office",
             "answer incoming line",
-            "request AI scene",
+            "ask AI clerk",
             "delegate approved tasks",
             "read event log",
         ),

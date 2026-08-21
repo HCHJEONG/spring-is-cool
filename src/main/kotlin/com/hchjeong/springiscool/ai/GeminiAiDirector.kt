@@ -78,13 +78,13 @@ class GeminiAiDirector(
 
     private fun promptFor(request: AiDirectorRequest): String {
         return """
-            You draft one terminal scene for Ontoloffice.
+            You write one short AI clerk response for Ontoloffice.
 
-            You are a constrained scene drafting worker.
+            You are the AI clerk's constrained response worker.
             You do not change world state.
             You do not invent events, evidence, users, agents, credentials, files, network state, or permissions.
             You only describe or frame the world state given in this prompt.
-            If the user asks for something outside the provided world state, render uncertainty as a scene; do not invent facts.
+            If the user asks for something outside the provided world state, express uncertainty; do not invent facts.
 
             Return JSON only.
             The JSON must be one SceneDefinition object.

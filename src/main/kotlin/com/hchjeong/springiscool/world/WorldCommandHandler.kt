@@ -23,7 +23,7 @@ class WorldCommandHandler(
             WorldCommand.Empty -> CommandResult.Continue(emptyScene())
             WorldCommand.Look -> CommandResult.Continue(lookScene(session))
             WorldCommand.Answer -> CommandResult.Continue(answerScene(session))
-            WorldCommand.Log -> CommandResult.Continue(logScene(session))
+            is WorldCommand.Log -> CommandResult.Continue(logScene(session, command.limit))
             WorldCommand.Status -> CommandResult.Continue(statusScene(session))
             WorldCommand.Help -> CommandResult.Continue(helpScene(session))
             WorldCommand.Quit -> CommandResult.Quit(goodbyeScene())
@@ -185,9 +185,8 @@ class WorldCommandHandler(
                 line("  LOOK     inspect the office", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  ANSWER   pick up the telephone", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  STATUS   read instruments", SceneStyle.MUTED, RevealMode.INSTANT, 90),
-                line("  LOG      read recorded events", SceneStyle.MUTED, RevealMode.INSTANT, 90),
-                line("  AI ...   ask the director for a scene", SceneStyle.MUTED, RevealMode.INSTANT, 90),
-                line("  ASSIGN AI clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  LOG      read recorded events, e.g. LOG for 100", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  ASSIGN   delegate work, e.g. ASSIGN AI clerk describe office", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  QUIT     close the line", SceneStyle.MUTED, RevealMode.INSTANT, 160),
                 blank(120),
@@ -215,21 +214,21 @@ class WorldCommandHandler(
         if (text.isBlank()) {
             session.record(
                 action = WorldAction.RequestedAiDirector,
-                observation = "The operator opened the AI director channel without a question.",
+                observation = "The operator opened the AI clerk channel without a question.",
             )
 
             return Scene(
                 lines = listOf(
-                    line("AI DIRECTOR", SceneStyle.SYSTEM, RevealMode.INSTANT, 200),
-                    line("Give the line a sentence after AI.", SceneStyle.MUTED, delayAfterMillis = 260),
-                    line("Example: AI what is listening in this room?", SceneStyle.MUTED, RevealMode.INSTANT, 160),
+                    line("AI CLERK", SceneStyle.SYSTEM, RevealMode.INSTANT, 200),
+                    line("AI requests are handled by AI clerk.", SceneStyle.MUTED, delayAfterMillis = 260),
+                    line("Try: ASSIGN AI clerk describe office", SceneStyle.MUTED, RevealMode.INSTANT, 160),
                 ),
             )
         }
 
         val event = session.record(
             action = WorldAction.RequestedAiDirector,
-            observation = "The operator asked the AI director: $text",
+            observation = "The operator asked AI clerk: $text",
         )
 
         val result = aiDirector.direct(
@@ -242,8 +241,8 @@ class WorldCommandHandler(
         if (result is AiDirectorResult.Fallback) {
             session.record(
                 action = WorldAction.AgentReported,
-                observation = "AI director provider fallback: ${result.reason}",
-                actor = Actor("ai-director"),
+                observation = "AI clerk provider fallback: ${result.reason}",
+                actor = Actor("ai-clerk"),
             )
         }
 
@@ -276,7 +275,8 @@ class WorldCommandHandler(
 
         val normalizedAgent = agentId.lowercase()
         val normalizedTask = task.lowercase()
-        val allowed = normalizedAgent in setOf("clerk", "ai-clerk") && normalizedTask == "check line"
+        val canonicalTask = canonicalAssignmentTask(normalizedTask)
+        val allowed = normalizedAgent in setOf("clerk", "ai-clerk") && canonicalTask != null
         val targetAgentId = "ai-clerk"
 
         if (!allowed) {
@@ -291,7 +291,7 @@ class WorldCommandHandler(
                 lines = listOf(
                     line("ASSIGNMENT DENIED", SceneStyle.WARNING, RevealMode.INSTANT, 220),
                     line("The office will not grant that authority.", delayAfterMillis = 340),
-                    line("$normalizedAgent cannot be assigned `$task` here.", SceneStyle.MUTED, delayAfterMillis = 260),
+                    line(assignmentDenialText(normalizedAgent, normalizedTask), SceneStyle.MUTED, delayAfterMillis = 260),
                     blank(100),
                     line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
                 ),
@@ -300,37 +300,40 @@ class WorldCommandHandler(
 
         val assignment = session.record(
             action = WorldAction.AssignedTask,
-            observation = "The operator delegated `check line` to AI clerk.",
+            observation = "The operator delegated `$canonicalTask` to AI clerk.",
             targetActorId = targetAgentId,
             authorityResult = AuthorityResult.ALLOWED,
         )
         val agentReport = session.record(
             action = WorldAction.AgentReported,
-            observation = "AI clerk inspected the carrier signal and reported line noise.",
+            observation = agentReportObservationFor(canonicalTask),
             actor = Actor(targetAgentId),
             authorityResult = AuthorityResult.ALLOWED,
         )
-        val evidence = session.record(
-            action = WorldAction.EvidenceAttached,
-            observation = "Evidence `carrier-tone-present` attached to the line check.",
-            actor = Actor(targetAgentId),
-            evidenceId = "carrier-tone-present",
-        )
+        val evidence = if (canonicalTask in setOf("check line", "file signal evidence")) {
+            session.record(
+                action = WorldAction.EvidenceAttached,
+                observation = "Evidence `carrier-tone-present` filed from the line signal.",
+                actor = Actor(targetAgentId),
+                evidenceId = "carrier-tone-present",
+            )
+        } else {
+            null
+        }
 
         return Scene(
             lines = listOf(
                 line("ASSIGNMENT ACCEPTED", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
-                line("You delegate the line check to AI clerk.", delayAfterMillis = 360),
+                line(assignmentTextFor(canonicalTask), delayAfterMillis = 360),
                 blank(140),
                 line("AI CLERK:", SceneStyle.SYSTEM, RevealMode.INSTANT, 180),
-                line("\"I can inspect the signal, not open the door.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
-                line("\"Carrier tone is present. Line noise is rising.\"", SceneStyle.DIALOGUE, delayAfterMillis = 460),
-                blank(120),
-                line("EVIDENCE FILED: carrier-tone-present", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+            ) + assignmentDialogueFor(canonicalTask) + listOfNotNull(
+                evidence?.let { line("EVIDENCE FILED: carrier-tone-present", SceneStyle.SYSTEM, RevealMode.INSTANT, 220) },
                 line(
-                    "EVENTS ${assignment.sequence.toString().padStart(3, '0')}, " +
-                        "${agentReport.sequence.toString().padStart(3, '0')}, " +
-                        "${evidence.sequence.toString().padStart(3, '0')} RECORDED.",
+                    "EVENTS ${
+                        listOfNotNull(assignment, agentReport, evidence)
+                            .joinToString(", ") { it.sequence.toString().padStart(3, '0') }
+                    } RECORDED.",
                     SceneStyle.SYSTEM,
                     RevealMode.INSTANT,
                     180,
@@ -339,13 +342,62 @@ class WorldCommandHandler(
         )
     }
 
-    private fun logScene(session: WorldSession): Scene {
+    private fun canonicalAssignmentTask(task: String): String? {
+        return when (task) {
+            "check line", "check line state" -> "check line"
+            "describe office", "describe office state" -> "describe office state"
+            "file signal evidence" -> "file signal evidence"
+            else -> null
+        }
+    }
+
+    private fun assignmentDenialText(agent: String, task: String): String {
+        return when (agent) {
+            "cleark" -> "Unknown agent `cleark`. Did you mean `AI clerk`?"
+            "clerk", "ai-clerk" -> "AI clerk cannot be assigned `$task` here."
+            else -> "$agent cannot be assigned `$task` here."
+        }
+    }
+
+    private fun assignmentTextFor(task: String): String {
+        return when (task) {
+            "file signal evidence" -> "You delegate signal evidence filing to AI clerk."
+            "describe office state" -> "You delegate office state description to AI clerk."
+            else -> "You delegate the line check to AI clerk."
+        }
+    }
+
+    private fun agentReportObservationFor(task: String): String {
+        return when (task) {
+            "describe office state" -> "AI clerk described the current office state."
+            else -> "AI clerk inspected the carrier signal and reported line noise."
+        }
+    }
+
+    private fun assignmentDialogueFor(task: String): List<SceneLine> {
+        return when (task) {
+            "describe office state" -> listOf(
+                line("\"Office state is stable. One user present.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
+                line("\"Telephone is silent. Line is offline.\"", SceneStyle.DIALOGUE, delayAfterMillis = 460),
+                blank(120),
+            )
+
+            else -> listOf(
+                line("\"I can inspect the signal, not open the door.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
+                line("\"Carrier tone is present. Line noise is rising.\"", SceneStyle.DIALOGUE, delayAfterMillis = 460),
+                blank(120),
+            )
+        }
+    }
+
+    private fun logScene(session: WorldSession, requestedLimit: Int): Scene {
+        val limit = requestedLimit.coerceIn(1, MAX_LOG_EVENTS)
         val event = session.record(
             action = WorldAction.RequestedHistory,
-            observation = "The operator requested the local event log.",
+            observation = "The operator requested the local event log for $limit events.",
         )
 
-        val historyLines = session.history().takeLast(MAX_LOG_EVENTS).map {
+        val historyLines = session.history().takeLast(limit).map {
             line(
                 text = it.toLogText(),
                 style = SceneStyle.MUTED,
@@ -357,6 +409,7 @@ class WorldCommandHandler(
         return Scene(
             lines = listOf(
                 line("LOCAL EVENT LOG", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+                line("Showing last $limit events.", SceneStyle.MUTED, RevealMode.INSTANT, 120),
                 line("EVENT ${event.sequence.toString().padStart(3, '0')} RECORDED.", SceneStyle.SYSTEM, RevealMode.INSTANT, 160),
                 blank(120),
             ) + historyLines,
@@ -494,7 +547,7 @@ class WorldCommandHandler(
     }
 
     companion object {
-        private const val MAX_LOG_EVENTS = 8
+        private const val MAX_LOG_EVENTS = 100
     }
 }
 

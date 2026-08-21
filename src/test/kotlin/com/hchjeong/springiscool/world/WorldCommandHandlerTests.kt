@@ -53,8 +53,21 @@ class WorldCommandHandlerTests {
         assertTrue(session.history().any { it.action == WorldAction.LineWentOffline })
         assertTrue(session.history().any { it.action == WorldAction.RequestedHistory })
         assertTrue(log.scene.lines.any { it.text.contains("LOCAL EVENT LOG") })
+        assertTrue(log.scene.lines.any { it.text.contains("Showing last 8 events.") })
         assertTrue(log.scene.lines.any { it.text.contains("ANSWER") })
         assertTrue(log.scene.lines.any { it.text.contains("OFFLINE") })
+    }
+
+    @Test
+    fun `log accepts requested event count up to limit`() {
+        val session = WorldSession()
+
+        repeat(12) { handler.handle(session, "look") }
+        val log = handler.handle(session, "log for 100")
+
+        assertIs<CommandResult.Continue>(log)
+        assertTrue(log.scene.lines.any { it.text.contains("Showing last 100 events.") })
+        assertTrue(log.scene.lines.count { it.text.contains("operator:LOOK") } >= 10)
     }
 
     @Test
@@ -134,7 +147,7 @@ class WorldCommandHandlerTests {
 
         assertIs<CommandResult.Continue>(result)
         assertTrue(session.history().any { it.action == WorldAction.RequestedAiDirector })
-        assertTrue(result.scene.lines.any { it.text.contains("AI DIRECTOR") })
+        assertTrue(result.scene.lines.any { it.text.contains("AI CLERK") })
         assertTrue(result.scene.lines.any { it.text.contains("EVENT") })
     }
 
@@ -152,7 +165,8 @@ class WorldCommandHandlerTests {
         assertIs<CommandResult.Continue>(ai)
         assertIs<CommandResult.Continue>(log)
         assertFalse(ai.scene.lines.any { it.text.contains("Line 1 field") })
-        assertTrue(log.scene.lines.any { it.text.contains("ai-director:AGENT") && it.text.contains("Line 1 field") })
+        assertTrue(log.scene.lines.any { it.text.contains("ai-clerk:AGENT") && it.text.contains("Line 1 field") })
+        assertTrue(log.scene.lines.any { it.text.contains("AI clerk provider fallback") })
     }
 
     @Test
@@ -173,6 +187,59 @@ class WorldCommandHandlerTests {
                 it.evidenceId == "carrier-tone-present"
         })
         assertTrue(result.scene.lines.any { it.text.contains("EVIDENCE FILED") })
+    }
+
+    @Test
+    fun `assign accepts file signal evidence task shown in authority list`() {
+        val session = WorldSession()
+
+        val result = handler.handle(session, "assign clerk file signal evidence")
+
+        assertIs<CommandResult.Continue>(result)
+        assertTrue(session.history().any {
+            it.action == WorldAction.AssignedTask &&
+                it.targetActorId == "ai-clerk" &&
+                it.authorityResult == AuthorityResult.ALLOWED &&
+                it.observation.text.contains("file signal evidence")
+        })
+        assertTrue(result.scene.lines.any { it.text.contains("signal evidence filing") })
+        assertTrue(result.scene.lines.any { it.text.contains("EVIDENCE FILED") })
+    }
+
+    @Test
+    fun `assign accepts describe office wording shown in authority list`() {
+        val session = WorldSession()
+
+        val result = handler.handle(session, "assign clerk describe office")
+
+        assertIs<CommandResult.Continue>(result)
+        assertTrue(session.history().any {
+            it.action == WorldAction.AssignedTask &&
+                it.authorityResult == AuthorityResult.ALLOWED &&
+                it.observation.text.contains("describe office state")
+        })
+        assertTrue(session.history().any {
+            it.actor.id == "ai-clerk" &&
+                it.action == WorldAction.AgentReported &&
+                it.observation.text.contains("office state")
+        })
+        assertFalse(result.scene.lines.any { it.text.contains("EVIDENCE FILED") })
+        assertTrue(result.scene.lines.any { it.text.contains("office state description") })
+    }
+
+    @Test
+    fun `assign typo for clerk suggests AI clerk`() {
+        val session = WorldSession()
+
+        val result = handler.handle(session, "assign cleark describe office")
+
+        assertIs<CommandResult.Continue>(result)
+        assertTrue(session.history().any {
+            it.action == WorldAction.AssignedTask &&
+                it.authorityResult == AuthorityResult.DENIED &&
+                it.targetActorId == "cleark"
+        })
+        assertTrue(result.scene.lines.any { it.text.contains("Did you mean `AI clerk`?") })
     }
 
     @Test
@@ -203,7 +270,7 @@ class WorldCommandHandlerTests {
     }
 
     @Test
-    fun `quit returns operations room terminal scene`() {
+    fun `quit returns operations room closing view`() {
         val result = handler.handle(WorldSession(), "quit")
 
         assertIs<CommandResult.Quit>(result)

@@ -12,11 +12,11 @@ class CommandParser {
 
         parseAiCommand(normalized)?.let { return it }
         parseAssignCommand(normalized)?.let { return it }
+        parseLogCommand(normalized)?.let { return it }
 
         return when (normalized.uppercase()) {
             "LOOK", "L" -> WorldCommand.Look
             "ANSWER", "A" -> WorldCommand.Answer
-            "LOG", "REMEMBER", "HISTORY" -> WorldCommand.Log
             "STATUS", "STAT" -> WorldCommand.Status
             "HELP", "?" -> WorldCommand.Help
             "QUIT", "EXIT" -> WorldCommand.Quit
@@ -24,6 +24,14 @@ class CommandParser {
             "ASSIGN" -> WorldCommand.Assign("", "")
             else -> WorldCommand.Unknown(normalized)
         }
+    }
+
+    private fun parseLogCommand(input: String): WorldCommand? {
+        val match = Regex("^(LOG|REMEMBER|HISTORY)(?:\\s+(?:FOR\\s+)?(\\d+))?$", RegexOption.IGNORE_CASE)
+            .matchEntire(input)
+            ?: return null
+
+        return WorldCommand.Log(match.groupValues.getOrNull(2)?.toIntOrNull() ?: WorldCommand.DEFAULT_LOG_LIMIT)
     }
 
     private fun parseAiCommand(input: String): WorldCommand? {
@@ -60,11 +68,15 @@ sealed interface WorldCommand {
     data object Empty : WorldCommand
     data object Look : WorldCommand
     data object Answer : WorldCommand
-    data object Log : WorldCommand
+    data class Log(val limit: Int = DEFAULT_LOG_LIMIT) : WorldCommand
     data object Status : WorldCommand
     data object Help : WorldCommand
     data object Quit : WorldCommand
     data class Ai(val text: String) : WorldCommand
     data class Assign(val agentId: String, val task: String) : WorldCommand
     data class Unknown(val text: String) : WorldCommand
+
+    companion object {
+        const val DEFAULT_LOG_LIMIT = 8
+    }
 }
