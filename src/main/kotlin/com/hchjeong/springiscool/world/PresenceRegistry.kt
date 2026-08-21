@@ -43,7 +43,7 @@ data class PresenceSnapshot(
             authority = listOf(
                 "check line state",
                 "describe office state",
-                "attach line evidence",
+                "file signal evidence",
             ),
         ),
     ),

@@ -2,6 +2,7 @@ package com.hchjeong.springiscool.world
 
 import com.hchjeong.springiscool.ai.AiDirector
 import com.hchjeong.springiscool.ai.AiDirectorRequest
+import com.hchjeong.springiscool.ai.AiDirectorResult
 import com.hchjeong.springiscool.ai.WorldSummary
 import com.hchjeong.springiscool.cinematic.renderer.RevealMode
 import com.hchjeong.springiscool.cinematic.renderer.Scene
@@ -181,10 +182,10 @@ class WorldCommandHandler(
             lines = listOf(
                 line("COMMAND CHANNEL", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
                 line("These words are wired:", SceneStyle.MUTED, RevealMode.INSTANT, 180),
-                line("  LOOK     inspect the room", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  LOOK     inspect the office", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  ANSWER   pick up the telephone", SceneStyle.MUTED, RevealMode.INSTANT, 90),
-                line("  STATUS   read the current world state", SceneStyle.MUTED, RevealMode.INSTANT, 90),
-                line("  LOG      replay recent events", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  STATUS   read instruments", SceneStyle.MUTED, RevealMode.INSTANT, 90),
+                line("  LOG      read recorded events", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  AI ...   ask the director for a scene", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  ASSIGN AI clerk check line", SceneStyle.MUTED, RevealMode.INSTANT, 90),
                 line("  HELP     show this list", SceneStyle.MUTED, RevealMode.INSTANT, 90),
@@ -238,6 +239,13 @@ class WorldCommandHandler(
                 availableTextArt = TextArtLibrary.assetNames(),
             ),
         )
+        if (result is AiDirectorResult.Fallback) {
+            session.record(
+                action = WorldAction.AgentReported,
+                observation = "AI director provider fallback: ${result.reason}",
+                actor = Actor("ai-director"),
+            )
+        }
 
         return result.scene.copy(
             lines = result.scene.lines + line(
@@ -318,7 +326,7 @@ class WorldCommandHandler(
                 line("\"I can inspect the signal, not open the door.\"", SceneStyle.DIALOGUE, delayAfterMillis = 420),
                 line("\"Carrier tone is present. Line noise is rising.\"", SceneStyle.DIALOGUE, delayAfterMillis = 460),
                 blank(120),
-                line("EVIDENCE ATTACHED: carrier-tone-present", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
+                line("EVIDENCE FILED: carrier-tone-present", SceneStyle.SYSTEM, RevealMode.INSTANT, 220),
                 line(
                     "EVENTS ${assignment.sequence.toString().padStart(3, '0')}, " +
                         "${agentReport.sequence.toString().padStart(3, '0')}, " +

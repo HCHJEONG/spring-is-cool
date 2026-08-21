@@ -67,6 +67,42 @@ class GeminiAiDirectorTests {
     }
 
     @Test
+    fun `falls back with readable reason when provider sends object for text`() {
+        val director = GeminiAiDirector(
+            properties = AiDirectorProperties(
+                enabled = true,
+                provider = "gemini",
+                project = "demo-project",
+                location = "global",
+                modelId = "gemini-2.5-flash-lite",
+            ),
+            client = FakeGeminiTextClient(
+                """
+                {
+                  "id": "gemini-object-text",
+                  "terminalWidth": 80,
+                  "lines": [
+                    {
+                      "text": { "value": "not a scalar" },
+                      "style": "SYSTEM",
+                      "reveal": "INSTANT",
+                      "delayAfterMillis": 10
+                    }
+                  ]
+                }
+                """.trimIndent(),
+            ),
+            callLimiter = FakeAiProviderCallLimiter(),
+            sceneDefinitionLoader = SceneDefinitionLoader(),
+        )
+
+        val result = director.direct(request())
+
+        assertIs<AiDirectorResult.Fallback>(result)
+        assertTrue(result.reason.contains("Line 1 field `text` must be a string."))
+    }
+
+    @Test
     fun `ignores unknown provider fields before validation`() {
         val director = GeminiAiDirector(
             properties = AiDirectorProperties(
@@ -137,7 +173,8 @@ class GeminiAiDirectorTests {
         val result = director.direct(request())
 
         assertIs<AiDirectorResult.Fallback>(result)
-        assertTrue(result.scene.lines.any { it.text.contains("monthly call limit") })
+        assertTrue(result.reason.contains("monthly call limit"))
+        assertTrue(result.scene.lines.none { it.text.contains("monthly call limit") })
         assertTrue(client.calls == 0)
     }
 

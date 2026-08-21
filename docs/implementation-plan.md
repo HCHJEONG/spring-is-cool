@@ -828,7 +828,7 @@ MVP가 단순 command demo가 아니라 event-backed semantic world처럼 느껴
 - `LOOK`, `STATUS`, static AI, and Gemini AI now consume projected facts.
 - The first incoming call now resolves into an `OFFLINE` event instead of leaving an ambiguous open line.
 - `AI clerk` is visible before delegation, and delegation records `ai-clerk` as the agent actor id.
-- Participant authority is visible in `LOOK` and `STATUS`; SSH users can inspect/answer/request/delegate/read logs, while `AI clerk` can check line state, describe office state, and attach line evidence.
+- Participant authority is visible in `LOOK` and `STATUS`; SSH users can inspect/answer/request/delegate/read logs, while `AI clerk` can check line state, describe office state, and file signal evidence.
 
 ### Deferred Follow-Up
 

@@ -1,6 +1,13 @@
 package com.hchjeong.springiscool.world
 
+import com.hchjeong.springiscool.ai.AiDirector
+import com.hchjeong.springiscool.ai.AiDirectorRequest
+import com.hchjeong.springiscool.ai.AiDirectorResult
 import com.hchjeong.springiscool.ai.StaticAiDirector
+import com.hchjeong.springiscool.cinematic.renderer.Scene
+import com.hchjeong.springiscool.cinematic.renderer.SceneLine
+import com.hchjeong.springiscool.cinematic.renderer.SceneStyle
+import com.hchjeong.springiscool.cinematic.renderer.RevealMode
 import com.hchjeong.springiscool.cinematic.scene.SceneDefinitionLoader
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -96,10 +103,12 @@ class WorldCommandHandlerTests {
             assertTrue(look.scene.lines.any { it.text.contains("AI clerk terminal: STANDBY") })
             assertTrue(look.scene.lines.any { it.text.contains("SSH users may: inspect office") })
             assertTrue(look.scene.lines.any { it.text.contains("AI clerk may: check line state") })
+            assertTrue(look.scene.lines.any { it.text.contains("file signal evidence") })
             assertTrue(status.scene.lines.any { it.text.contains("USERS       2") })
             assertTrue(status.scene.lines.any { it.text.contains("AGENT       AI clerk: STANDBY") })
             assertTrue(status.scene.lines.any { it.text.contains("AUTHORITY   SSH users: inspect office") })
             assertTrue(status.scene.lines.any { it.text.contains("AUTHORITY   AI clerk: check line state") })
+            assertTrue(status.scene.lines.any { it.text.contains("file signal evidence") })
         } finally {
             firstUser.close()
             secondUser.close()
@@ -130,6 +139,23 @@ class WorldCommandHandlerTests {
     }
 
     @Test
+    fun `ai fallback hides technical reason until log is requested`() {
+        val handler = WorldCommandHandler(
+            CommandParser(),
+            FailingAiDirector("Line 1 field `text` must be a string."),
+        )
+        val session = WorldSession()
+
+        val ai = handler.handle(session, "ai check office state")
+        val log = handler.handle(session, "log")
+
+        assertIs<CommandResult.Continue>(ai)
+        assertIs<CommandResult.Continue>(log)
+        assertFalse(ai.scene.lines.any { it.text.contains("Line 1 field") })
+        assertTrue(log.scene.lines.any { it.text.contains("ai-director:AGENT") && it.text.contains("Line 1 field") })
+    }
+
+    @Test
     fun `assign delegates allowed task to fake agent and attaches evidence`() {
         val session = WorldSession()
 
@@ -146,7 +172,7 @@ class WorldCommandHandlerTests {
             it.action == WorldAction.EvidenceAttached &&
                 it.evidenceId == "carrier-tone-present"
         })
-        assertTrue(result.scene.lines.any { it.text.contains("EVIDENCE ATTACHED") })
+        assertTrue(result.scene.lines.any { it.text.contains("EVIDENCE FILED") })
     }
 
     @Test
@@ -196,5 +222,31 @@ class WorldCommandHandlerTests {
         assertFalse(introText.contains("LOOK"))
         assertFalse(introText.contains("ANSWER"))
         assertFalse(introText.contains("QUIT"))
+    }
+}
+
+private class FailingAiDirector(
+    private val reason: String,
+) : AiDirector {
+    override fun direct(request: AiDirectorRequest): AiDirectorResult {
+        return AiDirectorResult.Fallback(
+            scene = Scene(
+                lines = listOf(
+                    SceneLine(
+                        text = "AI provider signal collapsed. Static control retained.",
+                        reveal = RevealMode.INSTANT,
+                        style = SceneStyle.WARNING,
+                        delayAfterMillis = 0,
+                    ),
+                    SceneLine(
+                        text = "The failure was recorded in the local event log.",
+                        reveal = RevealMode.INSTANT,
+                        style = SceneStyle.MUTED,
+                        delayAfterMillis = 0,
+                    ),
+                ),
+            ),
+            reason = reason,
+        )
     }
 }

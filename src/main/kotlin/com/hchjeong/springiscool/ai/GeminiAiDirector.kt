@@ -1,6 +1,7 @@
 package com.hchjeong.springiscool.ai
 
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.hchjeong.springiscool.cinematic.renderer.RevealMode
@@ -41,7 +42,7 @@ class GeminiAiDirector(
 
         return runCatching {
             val text = client.generate(promptFor(request))
-            val definition = objectMapper.readValue<SceneDefinition>(extractJson(text))
+            val definition = parseSceneDefinition(extractJson(text))
             AiDirectorResult.Generated(
                 scene = sceneDefinitionLoader.toScene(definition),
                 definition = definition,
@@ -52,6 +53,26 @@ class GeminiAiDirector(
             )
         }.getOrElse {
             fallback("${properties.provider} provider failed: ${it.message.orEmpty().ifBlank { it::class.simpleName.orEmpty() }}")
+        }
+    }
+
+    private fun parseSceneDefinition(json: String): SceneDefinition {
+        val root = objectMapper.readTree(json)
+        require(root.isObject) { "Provider output must be one SceneDefinition JSON object." }
+        requireStringField(root, "id")
+        require(root.path("lines").isArray) { "Field `lines` must be an array." }
+        root.path("lines").forEachIndexed { index, line ->
+            require(line.isObject) { "Provider line ${index + 1} must be a JSON object." }
+            listOf("text", "art", "style", "reveal", "alignment").forEach { field ->
+                requireStringField(line, field, "Line ${index + 1} field `$field`")
+            }
+        }
+        return objectMapper.readValue(root.toString())
+    }
+
+    private fun requireStringField(node: JsonNode, field: String, label: String = "Field `$field`") {
+        if (node.has(field) && !node.path(field).isTextual) {
+            error("$label must be a string.")
         }
     }
 
@@ -118,7 +139,7 @@ class GeminiAiDirector(
                         delayAfterMillis = 260,
                     ),
                     SceneLine(
-                        text = reason.take(140),
+                        text = "The failure was recorded in the local event log.",
                         reveal = RevealMode.INSTANT,
                         style = SceneStyle.MUTED,
                         delayAfterMillis = 180,
