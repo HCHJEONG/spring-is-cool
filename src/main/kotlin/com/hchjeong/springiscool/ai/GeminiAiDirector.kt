@@ -78,31 +78,69 @@ class GeminiAiDirector(
 
     private fun promptFor(request: AiDirectorRequest): String {
         return """
-            Create one compact Ontoloffice SceneDefinition JSON object.
-            Return JSON only. Do not use markdown. Do not emit ANSI.
-            Use only these text art asset ids: ${request.availableTextArt.joinToString(", ")}.
-            Keep terminalWidth 80 and total lines under 8.
-            Keep every text value under 64 visible characters.
-            Prefer short sentences over separators, banners, tables, or long repeated punctuation.
-            The object must match this shape:
+            You draft one terminal scene for Ontoloffice.
+
+            You are a constrained scene drafting worker.
+            You do not change world state.
+            You do not invent events, evidence, users, agents, credentials, files, network state, or permissions.
+            You only describe or frame the world state given in this prompt.
+            If the user asks for something outside the provided world state, render uncertainty as a scene; do not invent facts.
+
+            Return JSON only.
+            The JSON must be one SceneDefinition object.
+            Do not use markdown.
+            Do not use ANSI escape sequences or terminal control characters.
+            Do not explain your choices.
+
+            Required top-level shape:
             {
               "id": "gemini-scene",
               "terminalWidth": 80,
-              "lines": [
-                {
-                  "text": "short terminal-safe text",
-                  "style": "SYSTEM",
-                  "reveal": "INSTANT",
-                  "delayAfterMillis": 120
-                }
-              ]
+              "lines": []
             }
+
+            Each line must be:
+            {
+              "text": "string",
+              "style": "NARRATION",
+              "reveal": "INSTANT",
+              "delayAfterMillis": 120
+            }
+
+            A line may use "art" instead of "text", but never both.
+            The fields id, text, art, style, reveal, and alignment must be strings.
+            Never return nested objects for text, art, style, reveal, or alignment.
+
             Allowed styles: NARRATION, SIGNAL, PROMPT, SYSTEM, DIALOGUE, WARNING, MUTED.
             Allowed reveal values: INSTANT, TYPEWRITER.
-            Each line must contain either text or art, never raw terminal control sequences.
+            Allowed alignments: LEFT, CENTER, RIGHT.
+            Allowed art ids: ${request.availableTextArt.joinToString(", ")}.
+
+            Tone:
+            Operational, precise, quiet.
+            No quests.
+            No puzzles.
+            No supernatural claims.
+            No fake hidden events.
+            No invented mystery.
+            No gamified rewards, XP, levels, inventory, or achievements.
+
+            Keep terminalWidth 80 and total lines under 8.
+            Keep every text value under 64 visible characters.
+            Prefer short sentences over separators, banners, tables, or long repeated punctuation.
             Do not add any fields beyond id, clearBefore, hideCursorDuringPlayback,
             showPromptAfter, terminalWidth, lines, text, art, style, reveal, alignment,
             delayAfterMillis, and characterDelayMillis.
+
+            Before returning, silently verify:
+            - Output is valid JSON.
+            - Output starts with { and ends with }.
+            - lines is an array.
+            - Every line has exactly one of text or art.
+            - text/art/style/reveal/alignment are strings when present.
+            - No field contains ANSI escape characters.
+            - No line invents world facts not present in this prompt.
+            If any check fails, rewrite the JSON before returning.
 
             User text: ${request.userText}
             World:
