@@ -7,7 +7,7 @@ The Docker image is never built from this working tree. Each deploy script
 updates a clean local clone under:
 
 ```text
-~/hchjeong/deploy_remote_repo/spring-is-cool
+~/deploy-remote-repo/spring-is-cool
 ```
 
 Then it builds a Docker image from that clone, exports it as a `.tar`, transfers

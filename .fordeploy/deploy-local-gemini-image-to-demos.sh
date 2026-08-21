@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${IMAGE:=spring-is-cool:gemini-2026082012}"
-: "${IMAGE_FILE:=/home/hchjeong/hchjeong/deploy_remote_repo/images/spring-is-cool-gemini-2026082012.tar}"
+: "${IMAGE_FILE:=/home/hchjeong/deploy-remote-repo/images/spring-is-cool-gemini-2026082012.tar}"
 
 deploy_target() {
   local host="$1"

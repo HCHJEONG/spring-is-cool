@@ -6,7 +6,7 @@ set -euo pipefail
 : "${CONTAINER_NAME:=spring-is-cool}"
 : "${REPO_URL:=git@github.com:HCHJEONG/spring-is-cool.git}"
 : "${DEPLOY_BRANCH:=main}"
-: "${CLEAN_CLONE_ROOT:=${HOME}/hchjeong/deploy_remote_repo}"
+: "${CLEAN_CLONE_ROOT:=${HOME}/deploy-remote-repo}"
 : "${AWS_DEMO_HOST:=aws-demo}"
 : "${REMOTE_IMAGE_DIR:=/home/ubuntu/docker_images/spring-is-cool}"
 : "${REMOTE_APP_DIR:=/home/ubuntu/spring-is-cool}"
